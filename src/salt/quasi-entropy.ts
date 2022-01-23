@@ -11,6 +11,7 @@ export class EnchantrixSaltQuasiEntropy {
 	 * @protected
 	 */
 	protected charMap = {
+		' ': '',
 		'o': '0',
 		'l': "1",
 		'e': "3",
@@ -47,7 +48,7 @@ export class EnchantrixSaltQuasiEntropy {
 		let i: number = this._input.length;
 		let salt:string[] = []
 		while (i--) {
-			salt.push(this._input[i] === this.keyMap[this._input[i]] ? this.keyMap[this._input[i]] : this._input[i]);
+			salt.push(this.keyMap[this._input[i]] !== undefined ? this.keyMap[this._input[i]] : this._input[i]);
 		}
 
 		return salt.join('');
