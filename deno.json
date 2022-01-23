@@ -1,8 +1,15 @@
 {
   "compilerOptions": {
-    "allowJs": true,
-    "lib": ["deno.window", "deno.unstable"],
-    "strict": true
+    "target": "esnext",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "dom.asynciterable",
+      "deno.ns",
+      "deno.window",
+      "deno.unstable",
+      "deno.worker"
+    ]
   },
   "lint": {
     "files": {

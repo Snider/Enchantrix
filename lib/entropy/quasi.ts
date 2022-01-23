@@ -1,9 +1,7 @@
 /**
  * Reproducible salts from input without prior knowledge
- *
- * @example const salt = new EnchantrixSaltQuasiEntropy('Snider').salty()
  */
-export class EnchantrixSaltQuasiEntropy {
+export class EnchantrixEntropyQuasi {
 
 	/**
 	 * Extend to enforce a custom mapping

@@ -1,5 +1,5 @@
 import { assertEquals } from "https://deno.land/std@0.122.0/testing/asserts.ts";
-import {EnchantrixSaltQuasiEntropy} from "./quasi-entropy.ts";
+import {EnchantrixEntropyQuasi} from "./quasi.ts";
 
 // Compact form: name and function
 Deno.test("IN: Snider OUT: r3dinS", () => {
