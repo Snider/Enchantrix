@@ -10,7 +10,8 @@ export class EnchantrixSaltQuasiEntropy {
 	 *
 	 * @protected
 	 */
-	protected charMap = {
+	// deno-lint-ignore no-explicit-any
+	protected charMap:any = {
 		' ': '',
 		'o': '0',
 		'l': "1",
@@ -20,10 +21,14 @@ export class EnchantrixSaltQuasiEntropy {
 		't': "7",
 	}
 
+	/**
+	 * @type {string} Origin Input
+	 * @protected
+	 */
 	protected readonly _input: string = ''
 
 	/**
-	 * Supply the input
+	 * Initiate with input to work on
 	 *
 	 * @param input
 	 */
@@ -31,27 +36,36 @@ export class EnchantrixSaltQuasiEntropy {
 		this._input = input
 	}
 
+	/**
+	 * Returns CharMap
+	 *
+	 * @returns {{'[char]': string}}
+	 */
+	// deno-lint-ignore no-explicit-any
 	get keyMap():any {
 		return this.charMap
 	}
 
 	/**
+	 * Performs salt on input
 	 *
-	 * @param {string} input
-	 * @returns {string}
+	 * @returns {string} Salted Input
 	 */
 	salty(): string {
 		if (!this._input) {
 			return '';
 		}
 
-		let i: number = this._input.length;
-		let salt:string[] = []
+		let i: number = this._input.length
+
+		const salt:string[] = []
+
 		while (i--) {
-			salt.push(this.keyMap[this._input[i]] !== undefined ? this.keyMap[this._input[i]] : this._input[i]);
+			// If Char is in the map, use the replaced value; otherwise use original char
+			salt.push(this.keyMap[this._input[i]] !== undefined ? this.keyMap[this._input[i]] : this._input[i])
 		}
 
-		return salt.join('');
+		return salt.join('')
 	}
 
 }
