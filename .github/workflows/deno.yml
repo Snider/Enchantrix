@@ -8,8 +8,6 @@ on:
 
 jobs:
   build:
-    env:
-      DENO_DIR: my_cache_directory
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -17,11 +15,6 @@ jobs:
     steps:
       - name: Setup repo
         uses: actions/checkout@v2
-      - name: Cache Deno dependencies
-        uses: actions/cache@v2
-        with:
-          path: ${{ env.DENO_DIR }}
-          key: my_cache_key
       - name: Setup Deno
         uses: denoland/setup-deno@v1
         with:
