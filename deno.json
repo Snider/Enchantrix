@@ -2,7 +2,8 @@
   "compilerOptions": {
     "target": "esnext",
     "lib": [
-      "deno.ns"
+      "deno.ns",
+      "dom"
     ]
   },
   "lint": {

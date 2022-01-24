@@ -12,3 +12,5 @@ Do not edit, EXTEND or otherwise play with ANY variable, unless you UNDERSTAND t
 
 [Read Before Use](DISCLAIMER.md) you've been warned.
 
+- ffmpeg
+  `deno run --unstable --allow-read --allow-run https://github.com/Snider/Enchatrix/lib/media/video/fmpeg.ts`
