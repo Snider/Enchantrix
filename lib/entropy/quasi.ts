@@ -1,71 +1,67 @@
+import {createHash} from '../../deps.ts';
+
 /**
  * Reproducible salts from input without prior knowledge
  */
 export class EnchantrixEntropyQuasi {
-  /**
-   * Extend to enforce a custom mapping
-   *
-   * @protected
-   */
-  // deno-lint-ignore no-explicit-any
-  protected charMap: any = {
-    " ": "",
-    "o": "0",
-    "l": "1",
-    "e": "3",
-    "a": "4",
-    "s": "z",
-    "t": "7",
-  };
 
-  /**
-   * @type {string} Origin Input
-   * @protected
-   */
-  protected readonly _input: string = "";
 
-  /**
-   * Initiate with input to work on
-   *
-   * @param input
-   */
-  constructor(input: string) {
-    this._input = input;
-  }
+	constructor() {
+	}
 
-  /**
-   * Returns CharMap
-   *
-   * @returns {{'[char]': string}}
-   */
-  // deno-lint-ignore no-explicit-any
-  get keyMap(): any {
-    return this.charMap;
-  }
+	/**
+	 * Holds the defult mapping swaps
+	 * @private
+	 */
+	protected static _keyMap = {
+		'o': '0',
+		'l': '1',
+		'e': '3',
+		'a': '4',
+		's': 'z',
+		't': '7',
+		'0': 'o',
+		'1': 'l',
+		'3': 'e',
+		'4': 'a',
+		'7': 't'
+	};
 
-  /**
-   * Performs salt on input
-   *
-   * @returns {string} Salted Input
-   */
-  salty(): string {
-    if (!this._input) {
-      return "";
-    }
+	static get keyMap(): any {
+		return this._keyMap;
+	}
 
-    let i: number = this._input.length;
+	static set keyMap(val) {
+		this._keyMap = val;
+	}
 
-    const salt: string[] = [];
+	static changeKeyMap(map: any) {
+		return this.keyMap(map);
+	}
 
-    while (i--) {
-      // If Char is in the map, use the replaced value; otherwise use original char
-      salt.push(
-        this.keyMap[this._input[i]] !== undefined
-          ? this.keyMap[this._input[i]]
-          : this._input[i],
-      );
-    }
+	static hash(input: string): string {
+		return createHash('sha256')
+			.update(input + this.createSalt(input))
+			.toString() as string;
+	}
 
-    return salt.join("");
-  }
+	/**
+	 * Creates a quasi-salt from a string.
+	 * @param input The input string.
+	 */
+	static createSalt(input: string): string {
+		if (!input) {
+			return '';
+		}
+
+		let i: number = input.length;
+		let salt: string[] = [];
+		while (i--) {
+			const char: string = input[i];
+			salt.push(this.keyMap[char] !== undefined ? this.keyMap[char] : char);
+		}
+
+		return salt.join('');
+	}
+
 }
