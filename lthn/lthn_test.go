@@ -13,6 +13,6 @@ func TestHash(t *testing.T) {
 
 func TestVerify(t *testing.T) {
 	hash := Hash("hello")
-	assert.True(t, Verifyf("hello", hash))
-	assert.False(t, Verifyf("world", hash))
+	assert.True(t, Verify("hello", hash))
+	assert.False(t, Verify("world", hash))
 }

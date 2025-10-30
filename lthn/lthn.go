@@ -56,6 +56,6 @@ func createSalt(input string) string {
 }
 
 // Verify checks if an input string matches a given hash.
-func Verifyf(input string, hash string) bool {
+func Verify(input string, hash string) bool {
 	return Hash(input) == hash
 }
