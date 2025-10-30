@@ -10,6 +10,9 @@ import (
 
 // Encrypt encrypts data using ChaCha20-Poly1305.
 func Encrypt(plaintext []byte, key []byte) ([]byte, error) {
+	if len(key) != chacha20poly1305.KeySize {
+		return nil, fmt.Errorf("invalid key size: got %d bytes, want %d bytes", len(key), chacha20poly1305.KeySize)
+	}
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return nil, err
@@ -25,25 +28,20 @@ func Encrypt(plaintext []byte, key []byte) ([]byte, error) {
 
 // Decrypt decrypts data using ChaCha20-Poly1305.
 func Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
+	if len(key) != chacha20poly1305.KeySize {
+		return nil, fmt.Errorf("invalid key size: got %d bytes, want %d bytes", len(key), chacha20poly1305.KeySize)
+	}
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return nil, err
 	}
 
-	if len(ciphertext) < aead.NonceSize() {
-		return nil, fmt.Errorf("ciphertext too short")
+	minLen := aead.NonceSize() + aead.Overhead()
+	if len(ciphertext) < minLen {
+		return nil, fmt.Errorf("ciphertext too short: got %d bytes, need at least %d bytes", len(ciphertext), minLen)
 	}
 
 	nonce, ciphertext := ciphertext[:aead.NonceSize()], ciphertext[aead.NonceSize():]
 
-	decrypted, err := aead.Open(nil, nonce, ciphertext, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(decrypted) == 0 {
-		return []byte{}, nil
-	}
-
-	return decrypted, nil
+	return aead.Open(nil, nonce, ciphertext, nil)
 }
