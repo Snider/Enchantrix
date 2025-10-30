@@ -1,16 +1,15 @@
 # Enchantrix
 
-The Little CryptoSuite that could.
+Enchantrix is a Go-based encryption library for the Core framework, designed to provide a secure and easy-to-use framework for handling sensitive data in Web3 applications. It will feature Poly-ChaCha stream proxying and a custom `.trix` file format for encrypted data.
+
+## Test-Driven Development
+
+This project follows a strict Test-Driven Development (TDD) methodology. All new functionality must be accompanied by a comprehensive suite of tests.
+
+## Getting Started
+
+To get started with Enchantrix, you'll need to have Go installed. You can then run the tests using the following command:
 
 ```shell
-deno test
+go test ./...
 ```
-
-This is used in Lethean, however; is not for DIRECT code-level public use, misuse of this software, can result in criminal charges, on you, not me.
-
-Do not edit, EXTEND or otherwise play with ANY variable, unless you UNDERSTAND to silicon, what you are doing.
-
-[Read Before Use](DISCLAIMER.md) you've been warned.
-
-- ffmpeg
-  `deno run --unstable --allow-read --allow-run https://github.com/Snider/Enchatrix/lib/media/video/fmpeg.ts`
