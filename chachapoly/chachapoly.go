@@ -10,6 +10,9 @@ import (
 
 // Encrypt encrypts data using ChaCha20-Poly1305.
 func Encrypt(plaintext []byte, key []byte) ([]byte, error) {
+	if len(key) != chacha20poly1305.KeySize {
+		return nil, fmt.Errorf("invalid key size: got %d bytes, want %d bytes", len(key), chacha20poly1305.KeySize)
+	}
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return nil, err
