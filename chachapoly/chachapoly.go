@@ -30,8 +30,9 @@ func Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	if len(ciphertext) < aead.NonceSize() {
-		return nil, fmt.Errorf("ciphertext too short")
+	minLen := aead.NonceSize() + aead.Overhead()
+	if len(ciphertext) < minLen {
+		return nil, fmt.Errorf("ciphertext too short: got %d bytes, need at least %d bytes", len(ciphertext), minLen)
 	}
 
 	nonce, ciphertext := ciphertext[:aead.NonceSize()], ciphertext[aead.NonceSize():]
