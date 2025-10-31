@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/Snider/Enchantrix/chachapoly"
+	"github.com/Snider/Enchantrix/pkg/crypt/std/chachapoly"
 	"github.com/Snider/Enchantrix/trix"
 )
 

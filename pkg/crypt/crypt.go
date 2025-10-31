@@ -10,8 +10,16 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Snider/Enchantrix/lthn"
+	"github.com/Snider/Enchantrix/pkg/crypt/std/lthn"
 )
+
+// Service is the main struct for the crypt service.
+type Service struct{}
+
+// NewService creates a new crypt service.
+func NewService() *Service {
+	return &Service{}
+}
 
 // HashType defines the supported hashing algorithms.
 type HashType string
@@ -27,7 +35,7 @@ const (
 // --- Hashing ---
 
 // Hash computes a hash of the payload using the specified algorithm.
-func Hash(lib HashType, payload string) string {
+func (s *Service) Hash(lib HashType, payload string) string {
 	switch lib {
 	case LTHN:
 		return lthn.Hash(payload)
@@ -51,7 +59,7 @@ func Hash(lib HashType, payload string) string {
 // --- Checksums ---
 
 // Luhn validates a number using the Luhn algorithm.
-func Luhn(payload string) bool {
+func (s *Service) Luhn(payload string) bool {
 	payload = strings.ReplaceAll(payload, " ", "")
 	sum := 0
 	isSecond := false
@@ -75,7 +83,7 @@ func Luhn(payload string) bool {
 }
 
 // Fletcher16 computes the Fletcher-16 checksum.
-func Fletcher16(payload string) uint16 {
+func (s *Service) Fletcher16(payload string) uint16 {
 	data := []byte(payload)
 	var sum1, sum2 uint16
 	for _, b := range data {
@@ -86,7 +94,7 @@ func Fletcher16(payload string) uint16 {
 }
 
 // Fletcher32 computes the Fletcher-32 checksum.
-func Fletcher32(payload string) uint32 {
+func (s *Service) Fletcher32(payload string) uint32 {
 	data := []byte(payload)
 	if len(data)%2 != 0 {
 		data = append(data, 0)
@@ -102,7 +110,7 @@ func Fletcher32(payload string) uint32 {
 }
 
 // Fletcher64 computes the Fletcher-64 checksum.
-func Fletcher64(payload string) uint64 {
+func (s *Service) Fletcher64(payload string) uint64 {
 	data := []byte(payload)
 	if len(data)%4 != 0 {
 		padding := 4 - (len(data) % 4)
@@ -127,7 +135,7 @@ func Fletcher64(payload string) uint64 {
 // import "github.com/Snider/Enchantrix/openpgp"
 //
 // // EncryptPGP encrypts data for a recipient, optionally signing it.
-// func EncryptPGP(writer io.Writer, recipientPath, data string, signerPath, signerPassphrase *string) error {
+// func (s *Service) EncryptPGP(writer io.Writer, recipientPath, data string, signerPath, signerPassphrase *string) error {
 // 	var buf bytes.Buffer
 // 	err := openpgp.EncryptPGP(&buf, recipientPath, data, signerPath, signerPassphrase)
 // 	if err != nil {
@@ -143,6 +151,6 @@ func Fletcher64(payload string) uint64 {
 // }
 //
 // // DecryptPGP decrypts a PGP message, optionally verifying the signature.
-// func DecryptPGP(recipientPath, message, passphrase string, signerPath *string) (string, error) {
+// func (s *Service) DecryptPGP(recipientPath, message, passphrase string, signerPath *string) (string, error) {
 // 	return openpgp.DecryptPGP(recipientPath, message, passphrase, signerPath)
 // }
