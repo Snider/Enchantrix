@@ -7,18 +7,24 @@ import (
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
+	"io"
 	"strconv"
 	"strings"
 
 	"github.com/Snider/Enchantrix/pkg/crypt/std/lthn"
+	"github.com/Snider/Enchantrix/pkg/crypt/std/openpgp"
 )
 
 // Service is the main struct for the crypt service.
-type Service struct{}
+type Service struct {
+	pgp *openpgp.Service
+}
 
 // NewService creates a new crypt service.
 func NewService() *Service {
-	return &Service{}
+	return &Service{
+		pgp: openpgp.NewService(),
+	}
 }
 
 // HashType defines the supported hashing algorithms.
@@ -132,29 +138,22 @@ func (s *Service) Fletcher64(payload string) uint64 {
 
 // --- PGP ---
 
-// @snider
-// The PGP functions are commented out pending resolution of the dependency issues.
-//
-// import "io"
-// import "github.com/Snider/Enchantrix/openpgp"
-//
-// // EncryptPGP encrypts data for a recipient, optionally signing it.
-// func (s *Service) EncryptPGP(writer io.Writer, recipientPath, data string, signerPath, signerPassphrase *string) error {
-// 	var buf bytes.Buffer
-// 	err := openpgp.EncryptPGP(&buf, recipientPath, data, signerPath, signerPassphrase)
-// 	if err != nil {
-// 		return err
-// 	}
-//
-// 	// Copy the encrypted data to the original writer.
-// 	if _, err := writer.Write(buf.Bytes()); err != nil {
-// 		return err
-// 	}
-//
-// 	return nil
-// }
-//
-// // DecryptPGP decrypts a PGP message, optionally verifying the signature.
-// func (s *Service) DecryptPGP(recipientPath, message, passphrase string, signerPath *string) (string, error) {
-// 	return openpgp.DecryptPGP(recipientPath, message, passphrase, signerPath)
-// }
+// GeneratePGPKeyPair creates a new PGP key pair.
+func (s *Service) GeneratePGPKeyPair(name, email, passphrase string) (publicKey, privateKey string, err error) {
+	return s.pgp.GenerateKeyPair(name, email, passphrase)
+}
+
+// AddPGPSubkey adds a new subkey to an existing key pair.
+func (s *Service) AddPGPSubkey(privateKey, passphrase string) (updatedPrivateKey string, err error) {
+	return s.pgp.AddSubkey(privateKey, passphrase)
+}
+
+// EncryptPGP encrypts data for a recipient, optionally signing it.
+func (s *Service) EncryptPGP(writer io.Writer, recipientPath, data string, signerPath, signerPassphrase *string) error {
+	return s.pgp.EncryptPGP(writer, recipientPath, data, signerPath, signerPassphrase)
+}
+
+// DecryptPGP decrypts a PGP message, optionally verifying the signature.
+func (s *Service) DecryptPGP(recipientPath, message, passphrase string, signerPath *string) (string, error) {
+	return s.pgp.DecryptPGP(recipientPath, message, passphrase, signerPath)
+}
