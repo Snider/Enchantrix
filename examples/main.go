@@ -6,8 +6,8 @@ import (
 	"log"
 	"time"
 
-	"github.com/Snider/Enchantrix/chachapoly"
-	"github.com/Snider/Enchantrix/trix"
+	"github.com/Snider/Enchantrix/pkg/crypt/std/chachapoly"
+	"github.com/Snider/Enchantrix/pkg/trix"
 )
 
 func main() {
@@ -44,7 +44,8 @@ func main() {
 	}
 
 	// 4. Encode the .trix container into its binary format
-	encodedTrix, err := trix.Encode(trixContainer)
+	magicNumber := "MyT1" // My Trix 1
+	encodedTrix, err := trix.Encode(trixContainer, magicNumber)
 	if err != nil {
 		log.Fatalf("Failed to encode .trix container: %v", err)
 	}
@@ -52,7 +53,7 @@ func main() {
 	fmt.Println("Successfully created .trix container.")
 
 	// 5. Decode the .trix container to retrieve the encrypted data
-	decodedTrix, err := trix.Decode(encodedTrix)
+	decodedTrix, err := trix.Decode(encodedTrix, magicNumber)
 	if err != nil {
 		log.Fatalf("Failed to decode .trix container: %v", err)
 	}
