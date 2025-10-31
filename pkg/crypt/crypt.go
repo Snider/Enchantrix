@@ -19,7 +19,7 @@ type Service struct {
 	rsa *rsa.Service
 }
 
-// NewService creates a new crypt service.
+// NewService creates a new crypt Service and initialises its embedded RSA service.
 func NewService() *Service {
 	return &Service{
 		rsa: rsa.NewService(),
