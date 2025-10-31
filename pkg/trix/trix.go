@@ -5,17 +5,18 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 )
 
 const (
-	MagicNumber = "TRIX"
-	Version     = 2
+	Version = 2
 )
 
 var (
 	ErrInvalidMagicNumber = errors.New("trix: invalid magic number")
 	ErrInvalidVersion     = errors.New("trix: invalid version")
+	ErrMagicNumberLength  = errors.New("trix: magic number must be 4 bytes long")
 )
 
 // Trix represents the structure of a .trix file.
@@ -25,7 +26,11 @@ type Trix struct {
 }
 
 // Encode serializes a Trix struct into the .trix binary format.
-func Encode(trix *Trix) ([]byte, error) {
+func Encode(trix *Trix, magicNumber string) ([]byte, error) {
+	if len(magicNumber) != 4 {
+		return nil, ErrMagicNumberLength
+	}
+
 	headerBytes, err := json.Marshal(trix.Header)
 	if err != nil {
 		return nil, err
@@ -35,7 +40,7 @@ func Encode(trix *Trix) ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	// Write Magic Number
-	if _, err := buf.WriteString(MagicNumber); err != nil {
+	if _, err := buf.WriteString(magicNumber); err != nil {
 		return nil, err
 	}
 
@@ -63,7 +68,11 @@ func Encode(trix *Trix) ([]byte, error) {
 }
 
 // Decode deserializes the .trix binary format into a Trix struct.
-func Decode(data []byte) (*Trix, error) {
+func Decode(data []byte, magicNumber string) (*Trix, error) {
+	if len(magicNumber) != 4 {
+		return nil, ErrMagicNumberLength
+	}
+
 	buf := bytes.NewReader(data)
 
 	// Read and Verify Magic Number
@@ -71,8 +80,8 @@ func Decode(data []byte) (*Trix, error) {
 	if _, err := io.ReadFull(buf, magic); err != nil {
 		return nil, err
 	}
-	if string(magic) != MagicNumber {
-		return nil, ErrInvalidMagicNumber
+	if string(magic) != magicNumber {
+		return nil, fmt.Errorf("%w: expected %s, got %s", ErrInvalidMagicNumber, magicNumber, string(magic))
 	}
 
 	// Read and Verify Version
