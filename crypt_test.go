@@ -2,6 +2,7 @@ package crypt
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,4 +46,23 @@ func TestFletcher64(t *testing.T) {
 	assert.Equal(t, uint64(0xc8c6c527646362c6), Fletcher64("abcde"))
 	assert.Equal(t, uint64(0xc8c72b276463c8c6), Fletcher64("abcdef"))
 	assert.Equal(t, uint64(0x312e2b28cccac8c6), Fletcher64("abcdefgh"))
+}
+
+func TestRootFS(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "enchantrix-crypt-test")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tempDir)
+
+	key := make([]byte, 32)
+	for i := range key {
+		key[i] = 1
+	}
+
+	fs := NewRootFS(tempDir, key)
+	err = fs.Write("test.txt", []byte("hello"))
+	assert.NoError(t, err)
+
+	data, err := fs.Read("test.txt")
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("hello"), data)
 }

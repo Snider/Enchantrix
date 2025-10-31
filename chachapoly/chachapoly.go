@@ -11,9 +11,6 @@ import (
 
 // Encrypt encrypts data using ChaCha20-Poly1305 and returns a .trix file format.
 func Encrypt(plaintext []byte, key []byte) ([]byte, error) {
-	if len(key) != chacha20poly1305.KeySize {
-		return nil, fmt.Errorf("invalid key size: got %d bytes, want %d bytes", len(key), chacha20poly1305.KeySize)
-	}
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return nil, err
@@ -40,13 +37,9 @@ func Encrypt(plaintext []byte, key []byte) ([]byte, error) {
 	return trix.Encode(trixData)
 }
 
-// Decrypt decrypts data from a .trix file format using ChaCha20-Poly1305.
-func Decrypt(trixEncoded []byte, key []byte) ([]byte, error) {
-	if len(key) != chacha20poly1305.KeySize {
-		return nil, fmt.Errorf("invalid key size: got %d bytes, want %d bytes", len(key), chacha20poly1305.KeySize)
-	}
-
-	trixData, err := trix.Decode(trixEncoded)
+// Decrypt decrypts data using ChaCha20-Poly1305.
+func Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
+	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return nil, err
 	}
@@ -59,5 +52,14 @@ func Decrypt(trixEncoded []byte, key []byte) ([]byte, error) {
 	nonceBytes := trixData.Nonce[:]
 	ciphertext := trixData.Ciphertext
 
-	return aead.Open(nil, nonceBytes, ciphertext, nil)
+	decrypted, err := aead.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(decrypted) == 0 {
+		return []byte{}, nil
+	}
+
+	return decrypted, nil
 }
