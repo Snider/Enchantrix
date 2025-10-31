@@ -7,7 +7,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
+
 	"github.com/Snider/Enchantrix/pkg/crypt"
+	"github.com/Snider/Enchantrix/pkg/enchantrix"
 )
 
 const (
@@ -22,19 +24,13 @@ var (
 	ErrChecksumMismatch   = errors.New("trix: checksum mismatch")
 )
 
-// Sigil defines the interface for a data transformer.
-type Sigil interface {
-	In(data []byte) ([]byte, error)
-	Out(data []byte) ([]byte, error)
-}
-
 // Trix represents the structure of a .trix file.
 type Trix struct {
-	Header         map[string]interface{}
-	Payload        []byte
-	InSigils       []Sigil `json:"-"` // Ignore Sigils during JSON marshaling
-	OutSigils      []Sigil `json:"-"` // Ignore Sigils during JSON marshaling
-	ChecksumAlgo crypt.HashType   `json:"-"`
+	Header       map[string]interface{}
+	Payload      []byte
+	InSigils     []string `json:"-"` // Ignore Sigils during JSON marshaling
+	OutSigils    []string `json:"-"` // Ignore Sigils during JSON marshaling
+	ChecksumAlgo crypt.HashType `json:"-"`
 }
 
 // Encode serializes a Trix struct into the .trix binary format.
@@ -155,11 +151,14 @@ func Decode(data []byte, magicNumber string) (*Trix, error) {
 
 // Pack applies the In method of all attached sigils to the payload.
 func (t *Trix) Pack() error {
-	for _, sigil := range t.InSigils {
+	for _, sigilName := range t.InSigils {
+		sigil, err := enchantrix.NewSigil(sigilName)
+		if err != nil {
+			return err
+		}
 		if sigil == nil {
 			return ErrNilSigil
 		}
-		var err error
 		t.Payload, err = sigil.In(t.Payload)
 		if err != nil {
 			return err
@@ -170,38 +169,23 @@ func (t *Trix) Pack() error {
 
 // Unpack applies the Out method of all sigils in reverse order.
 func (t *Trix) Unpack() error {
-	sigils := t.OutSigils
-	if len(sigils) == 0 {
-		sigils = t.InSigils
+	sigilNames := t.OutSigils
+	if len(sigilNames) == 0 {
+		sigilNames = t.InSigils
 	}
-	for i := len(sigils) - 1; i >= 0; i-- {
-		sigil := sigils[i]
+	for i := len(sigilNames) - 1; i >= 0; i-- {
+		sigilName := sigilNames[i]
+		sigil, err := enchantrix.NewSigil(sigilName)
+		if err != nil {
+			return err
+		}
 		if sigil == nil {
 			return ErrNilSigil
 		}
-		var err error
 		t.Payload, err = sigil.Out(t.Payload)
 		if err != nil {
 			return err
 		}
 	}
 	return nil
-}
-
-// ReverseSigil is an example Sigil that reverses the bytes of the payload.
-type ReverseSigil struct{}
-
-// In reverses the bytes of the data.
-func (s *ReverseSigil) In(data []byte) ([]byte, error) {
-	reversed := make([]byte, len(data))
-	for i, j := 0, len(data)-1; i < len(data); i, j = i+1, j-1 {
-		reversed[i] = data[j]
-	}
-	return reversed, nil
-}
-
-// Out reverses the bytes of the data.
-func (s *ReverseSigil) Out(data []byte) ([]byte, error) {
-	// Reversing the bytes again restores the original data.
-	return s.In(data)
 }

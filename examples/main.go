@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"time"
+
 	"github.com/Snider/Enchantrix/pkg/crypt"
 	"github.com/Snider/Enchantrix/pkg/crypt/std/chachapoly"
 	"github.com/Snider/Enchantrix/pkg/trix"
@@ -20,9 +21,9 @@ func main() {
 
 	// 2. Create a Trix container with the plaintext and attach sigils
 	trixContainer := &trix.Trix{
-		Header:   map[string]interface{}{},
-		Payload:  plaintext,
-		InSigils: []trix.Sigil{&trix.ReverseSigil{}},
+		Header:  map[string]interface{}{},
+		Payload: plaintext,
+		InSigils: []string{"reverse"},
 	}
 
 	// 3. Pack the Trix container to apply the sigil transformations
@@ -30,7 +31,6 @@ func main() {
 		log.Fatalf("Failed to pack trix container: %v", err)
 	}
 	fmt.Printf("Packed (obfuscated) payload: %x\n", trixContainer.Payload)
-
 
 	// 4. Encrypt the packed payload
 	ciphertext, err := chachapoly.Encrypt(trixContainer.Payload, key)
@@ -48,7 +48,6 @@ func main() {
 		"created_at":           time.Now().UTC().Format(time.RFC3339),
 	}
 	trixContainer.ChecksumAlgo = crypt.SHA256
-
 
 	// 6. Encode the .trix container into its binary format
 	magicNumber := "MyT1"

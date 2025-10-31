@@ -1,10 +1,10 @@
 package trix
 
 import (
-	"errors"
 	"io"
 	"reflect"
 	"testing"
+
 	"github.com/Snider/Enchantrix/pkg/crypt"
 	"github.com/stretchr/testify/assert"
 )
@@ -115,24 +115,12 @@ func TestTrixEncodeDecode_Ugly(t *testing.T) {
 
 // --- Sigil Tests ---
 
-// FailingSigil is a helper for testing sigils that intentionally fail.
-type FailingSigil struct {
-	err error
-}
-
-func (s *FailingSigil) In(data []byte) ([]byte, error) {
-	return nil, s.err
-}
-func (s *FailingSigil) Out(data []byte) ([]byte, error) {
-	return nil, s.err
-}
-
 func TestPackUnpack_Good(t *testing.T) {
 	originalPayload := []byte("hello world")
 	trix := &Trix{
-		Header:   map[string]interface{}{},
-		Payload:  originalPayload,
-		InSigils: []Sigil{&ReverseSigil{}, &ReverseSigil{}}, // Double reverse should be original
+		Header:  map[string]interface{}{},
+		Payload: originalPayload,
+		InSigils: []string{"reverse", "reverse"}, // Double reverse should be original
 	}
 
 	err := trix.Pack()
@@ -145,30 +133,15 @@ func TestPackUnpack_Good(t *testing.T) {
 }
 
 func TestPackUnpack_Bad(t *testing.T) {
-	expectedErr := errors.New("sigil failed")
 	trix := &Trix{
-		Header:   map[string]interface{}{},
-		Payload:  []byte("some data"),
-		InSigils: []Sigil{&ReverseSigil{}, &FailingSigil{err: expectedErr}},
+		Header:  map[string]interface{}{},
+		Payload: []byte("some data"),
+		InSigils: []string{"reverse", "invalid-sigil-name"},
 	}
 
 	err := trix.Pack()
 	assert.Error(t, err)
-	assert.Equal(t, expectedErr, err)
-}
-
-func TestPackUnpack_Ugly(t *testing.T) {
-	t.Run("NilSigil", func(t *testing.T) {
-		trix := &Trix{
-			Header:   map[string]interface{}{},
-			Payload:  []byte("some data"),
-			InSigils: []Sigil{nil},
-		}
-
-		err := trix.Pack()
-		assert.Error(t, err)
-		assert.Equal(t, ErrNilSigil, err)
-	})
+	assert.Contains(t, err.Error(), "unknown sigil name")
 }
 
 // --- Checksum Tests ---
