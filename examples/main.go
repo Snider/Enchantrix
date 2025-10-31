@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"time"
-
+	"github.com/Snider/Enchantrix/pkg/crypt"
 	"github.com/Snider/Enchantrix/pkg/crypt/std/chachapoly"
 	"github.com/Snider/Enchantrix/pkg/trix"
 )
@@ -20,9 +20,9 @@ func main() {
 
 	// 2. Create a Trix container with the plaintext and attach sigils
 	trixContainer := &trix.Trix{
-		Header:  map[string]interface{}{},
-		Payload: plaintext,
-		Sigils:  []trix.Sigil{&trix.ReverseSigil{}},
+		Header:   map[string]interface{}{},
+		Payload:  plaintext,
+		InSigils: []trix.Sigil{&trix.ReverseSigil{}},
 	}
 
 	// 3. Pack the Trix container to apply the sigil transformations
@@ -39,7 +39,7 @@ func main() {
 	}
 	trixContainer.Payload = ciphertext // Update the payload with the ciphertext
 
-	// 5. Add encryption metadata to the header
+	// 5. Add encryption metadata and checksum to the header
 	nonce := ciphertext[:24]
 	trixContainer.Header = map[string]interface{}{
 		"content_type":         "application/octet-stream",
@@ -47,6 +47,7 @@ func main() {
 		"nonce":                base64.StdEncoding.EncodeToString(nonce),
 		"created_at":           time.Now().UTC().Format(time.RFC3339),
 	}
+	trixContainer.ChecksumAlgo = crypt.SHA256
 
 
 	// 6. Encode the .trix container into its binary format
@@ -73,7 +74,7 @@ func main() {
 	decodedTrix.Payload = decryptedPayload
 
 	// 9. Unpack the Trix container to reverse the sigil transformations
-	decodedTrix.Sigils = trixContainer.Sigils // Re-attach sigils
+	decodedTrix.InSigils = trixContainer.InSigils // Re-attach sigils
 	if err := decodedTrix.Unpack(); err != nil {
 		log.Fatalf("Failed to unpack trix container: %v", err)
 	}

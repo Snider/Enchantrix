@@ -5,7 +5,7 @@ import (
 	"io"
 	"reflect"
 	"testing"
-
+	"github.com/Snider/Enchantrix/pkg/crypt"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -130,9 +130,9 @@ func (s *FailingSigil) Out(data []byte) ([]byte, error) {
 func TestPackUnpack_Good(t *testing.T) {
 	originalPayload := []byte("hello world")
 	trix := &Trix{
-		Header:  map[string]interface{}{},
-		Payload: originalPayload,
-		Sigils:  []Sigil{&ReverseSigil{}, &ReverseSigil{}}, // Double reverse should be original
+		Header:   map[string]interface{}{},
+		Payload:  originalPayload,
+		InSigils: []Sigil{&ReverseSigil{}, &ReverseSigil{}}, // Double reverse should be original
 	}
 
 	err := trix.Pack()
@@ -147,9 +147,9 @@ func TestPackUnpack_Good(t *testing.T) {
 func TestPackUnpack_Bad(t *testing.T) {
 	expectedErr := errors.New("sigil failed")
 	trix := &Trix{
-		Header:  map[string]interface{}{},
-		Payload: []byte("some data"),
-		Sigils:  []Sigil{&ReverseSigil{}, &FailingSigil{err: expectedErr}},
+		Header:   map[string]interface{}{},
+		Payload:  []byte("some data"),
+		InSigils: []Sigil{&ReverseSigil{}, &FailingSigil{err: expectedErr}},
 	}
 
 	err := trix.Pack()
@@ -160,13 +160,70 @@ func TestPackUnpack_Bad(t *testing.T) {
 func TestPackUnpack_Ugly(t *testing.T) {
 	t.Run("NilSigil", func(t *testing.T) {
 		trix := &Trix{
-			Header:  map[string]interface{}{},
-			Payload: []byte("some data"),
-			Sigils:  []Sigil{nil},
+			Header:   map[string]interface{}{},
+			Payload:  []byte("some data"),
+			InSigils: []Sigil{nil},
 		}
 
 		err := trix.Pack()
 		assert.Error(t, err)
 		assert.Equal(t, ErrNilSigil, err)
+	})
+}
+
+// --- Checksum Tests ---
+
+func TestChecksum_Good(t *testing.T) {
+	trix := &Trix{
+		Header:       map[string]interface{}{},
+		Payload:      []byte("hello world"),
+		ChecksumAlgo: crypt.SHA256,
+	}
+	encoded, err := Encode(trix, "CHCK")
+	assert.NoError(t, err)
+
+	decoded, err := Decode(encoded, "CHCK")
+	assert.NoError(t, err)
+	assert.Equal(t, trix.Payload, decoded.Payload)
+}
+
+func TestChecksum_Bad(t *testing.T) {
+	trix := &Trix{
+		Header:       map[string]interface{}{},
+		Payload:      []byte("hello world"),
+		ChecksumAlgo: crypt.SHA256,
+	}
+	encoded, err := Encode(trix, "CHCK")
+	assert.NoError(t, err)
+
+	// Tamper with the payload
+	encoded[len(encoded)-1] = 0
+
+	_, err = Decode(encoded, "CHCK")
+	assert.Error(t, err)
+	assert.Equal(t, ErrChecksumMismatch, err)
+}
+
+func TestChecksum_Ugly(t *testing.T) {
+	t.Run("MissingAlgoInHeader", func(t *testing.T) {
+		trix := &Trix{
+			Header:       map[string]interface{}{},
+			Payload:      []byte("hello world"),
+			ChecksumAlgo: crypt.SHA256,
+		}
+		encoded, err := Encode(trix, "UGLY")
+		assert.NoError(t, err)
+
+		// Manually decode to tamper with the header
+		decoded, err := Decode(encoded, "UGLY")
+		assert.NoError(t, err)
+		delete(decoded.Header, "checksum_algo")
+
+		// Re-encode with the tampered header
+		tamperedEncoded, err := Encode(decoded, "UGLY")
+		assert.NoError(t, err)
+
+		_, err = Decode(tamperedEncoded, "UGLY")
+		assert.Error(t, err)
 	})
 }

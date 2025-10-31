@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"github.com/Snider/Enchantrix/pkg/crypt"
 )
 
 const (
@@ -18,6 +19,7 @@ var (
 	ErrInvalidVersion     = errors.New("trix: invalid version")
 	ErrMagicNumberLength  = errors.New("trix: magic number must be 4 bytes long")
 	ErrNilSigil           = errors.New("trix: sigil cannot be nil")
+	ErrChecksumMismatch   = errors.New("trix: checksum mismatch")
 )
 
 // Sigil defines the interface for a data transformer.
@@ -28,15 +30,24 @@ type Sigil interface {
 
 // Trix represents the structure of a .trix file.
 type Trix struct {
-	Header  map[string]interface{}
-	Payload []byte
-	Sigils  []Sigil `json:"-"` // Ignore Sigils during JSON marshaling
+	Header         map[string]interface{}
+	Payload        []byte
+	InSigils       []Sigil `json:"-"` // Ignore Sigils during JSON marshaling
+	OutSigils      []Sigil `json:"-"` // Ignore Sigils during JSON marshaling
+	ChecksumAlgo crypt.HashType   `json:"-"`
 }
 
 // Encode serializes a Trix struct into the .trix binary format.
 func Encode(trix *Trix, magicNumber string) ([]byte, error) {
 	if len(magicNumber) != 4 {
 		return nil, ErrMagicNumberLength
+	}
+
+	// Calculate and add checksum if an algorithm is specified
+	if trix.ChecksumAlgo != "" {
+		checksum := crypt.NewService().Hash(trix.ChecksumAlgo, string(trix.Payload))
+		trix.Header["checksum"] = checksum
+		trix.Header["checksum_algo"] = string(trix.ChecksumAlgo)
 	}
 
 	headerBytes, err := json.Marshal(trix.Header)
@@ -124,6 +135,18 @@ func Decode(data []byte, magicNumber string) (*Trix, error) {
 		return nil, err
 	}
 
+	// Verify checksum if it exists in the header
+	if checksum, ok := header["checksum"].(string); ok {
+		algo, ok := header["checksum_algo"].(string)
+		if !ok {
+			return nil, errors.New("trix: checksum algorithm not found in header")
+		}
+		expectedChecksum := crypt.NewService().Hash(crypt.HashType(algo), string(payload))
+		if checksum != expectedChecksum {
+			return nil, ErrChecksumMismatch
+		}
+	}
+
 	return &Trix{
 		Header:  header,
 		Payload: payload,
@@ -132,7 +155,7 @@ func Decode(data []byte, magicNumber string) (*Trix, error) {
 
 // Pack applies the In method of all attached sigils to the payload.
 func (t *Trix) Pack() error {
-	for _, sigil := range t.Sigils {
+	for _, sigil := range t.InSigils {
 		if sigil == nil {
 			return ErrNilSigil
 		}
@@ -147,8 +170,12 @@ func (t *Trix) Pack() error {
 
 // Unpack applies the Out method of all sigils in reverse order.
 func (t *Trix) Unpack() error {
-	for i := len(t.Sigils) - 1; i >= 0; i-- {
-		sigil := t.Sigils[i]
+	sigils := t.OutSigils
+	if len(sigils) == 0 {
+		sigils = t.InSigils
+	}
+	for i := len(sigils) - 1; i >= 0; i-- {
+		sigil := sigils[i]
 		if sigil == nil {
 			return ErrNilSigil
 		}
