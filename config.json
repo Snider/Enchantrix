@@ -1,0 +1,20 @@
+{
+    "api": {
+        "id": "enchantrix-from-file",
+        "worker-id": "worker-1"
+    },
+    "http": {
+        "enabled": true,
+        "host": "127.0.0.1",
+        "port": 8081,
+        "access-token": null,
+        "restricted": true
+    },
+    "pools": [
+        {
+            "url": "pool.example.com:3333",
+            "user": "testuser",
+            "pass": "testpass"
+        }
+    ]
+}
