@@ -7,23 +7,22 @@ import (
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
-	"io"
 	"strconv"
 	"strings"
 
 	"github.com/Snider/Enchantrix/pkg/crypt/std/lthn"
-	"github.com/Snider/Enchantrix/pkg/crypt/std/openpgp"
+	"github.com/Snider/Enchantrix/pkg/crypt/std/rsa"
 )
 
 // Service is the main struct for the crypt service.
 type Service struct {
-	pgp *openpgp.Service
+	rsa *rsa.Service
 }
 
 // NewService creates a new crypt service.
 func NewService() *Service {
 	return &Service{
-		pgp: openpgp.NewService(),
+		rsa: rsa.NewService(),
 	}
 }
 
@@ -136,24 +135,19 @@ func (s *Service) Fletcher64(payload string) uint64 {
 	return (sum2 << 32) | sum1
 }
 
-// --- PGP ---
+// --- RSA ---
 
-// GeneratePGPKeyPair creates a new PGP key pair.
-func (s *Service) GeneratePGPKeyPair(name, email, passphrase string) (publicKey, privateKey string, err error) {
-	return s.pgp.GenerateKeyPair(name, email, passphrase)
+// GenerateRSAKeyPair creates a new RSA key pair.
+func (s *Service) GenerateRSAKeyPair(bits int) (publicKey, privateKey []byte, err error) {
+	return s.rsa.GenerateKeyPair(bits)
 }
 
-// AddPGPSubkey adds a new subkey to an existing key pair.
-func (s *Service) AddPGPSubkey(privateKey, passphrase string) (updatedPrivateKey string, err error) {
-	return s.pgp.AddSubkey(privateKey, passphrase)
+// EncryptRSA encrypts data with a public key.
+func (s *Service) EncryptRSA(publicKey, data []byte) ([]byte, error) {
+	return s.rsa.Encrypt(publicKey, data)
 }
 
-// EncryptPGP encrypts data for a recipient, optionally signing it.
-func (s *Service) EncryptPGP(writer io.Writer, recipientPath, data string, signerPath, signerPassphrase *string) error {
-	return s.pgp.EncryptPGP(writer, recipientPath, data, signerPath, signerPassphrase)
-}
-
-// DecryptPGP decrypts a PGP message, optionally verifying the signature.
-func (s *Service) DecryptPGP(recipientPath, message, passphrase string, signerPath *string) (string, error) {
-	return s.pgp.DecryptPGP(recipientPath, message, passphrase, signerPath)
+// DecryptRSA decrypts data with a private key.
+func (s *Service) DecryptRSA(privateKey, ciphertext []byte) ([]byte, error) {
+	return s.rsa.Decrypt(privateKey, ciphertext)
 }
