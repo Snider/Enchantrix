@@ -12,7 +12,7 @@ import (
 // Service provides RSA functionality.
 type Service struct{}
 
-// NewService creates a new RSA service.
+// NewService creates and returns a new Service instance for performing RSA-related operations.
 func NewService() *Service {
 	return &Service{}
 }
