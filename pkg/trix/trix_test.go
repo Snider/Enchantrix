@@ -1,6 +1,7 @@
 package trix
 
 import (
+	"errors"
 	"io"
 	"reflect"
 	"testing"
@@ -109,5 +110,66 @@ func TestTrixEncodeDecode_Ugly(t *testing.T) {
 		decoded, err := Decode(encoded, magicNumber)
 		assert.NoError(t, err)
 		assert.NotNil(t, decoded)
+	})
+}
+
+// --- Sigil Tests ---
+
+// FailingSigil is a helper for testing sigils that intentionally fail.
+type FailingSigil struct {
+	err error
+}
+
+func (s *FailingSigil) In(data []byte) ([]byte, error) {
+	return nil, s.err
+}
+func (s *FailingSigil) Out(data []byte) ([]byte, error) {
+	return nil, s.err
+}
+
+func TestSigilPipeline_Good(t *testing.T) {
+	originalPayload := []byte("hello world")
+	trix := &Trix{
+		Header:  map[string]interface{}{},
+		Payload: originalPayload,
+		Sigils:  []Sigil{&ReverseSigil{}},
+	}
+
+	encoded, err := Encode(trix, "SIGL")
+	assert.NoError(t, err)
+
+	decoded, err := Decode(encoded, "SIGL")
+	assert.NoError(t, err)
+
+	// Manually apply the Out method to restore the original payload.
+	restoredPayload, err := trix.Sigils[0].Out(decoded.Payload)
+	assert.NoError(t, err)
+	assert.Equal(t, originalPayload, restoredPayload)
+}
+
+func TestSigilPipeline_Bad(t *testing.T) {
+	expectedErr := errors.New("sigil failed")
+	trix := &Trix{
+		Header:  map[string]interface{}{},
+		Payload: []byte("some data"),
+		Sigils:  []Sigil{&ReverseSigil{}, &FailingSigil{err: expectedErr}},
+	}
+
+	_, err := Encode(trix, "FAIL")
+	assert.Error(t, err)
+	assert.Equal(t, expectedErr, err)
+}
+
+func TestSigilPipeline_Ugly(t *testing.T) {
+	t.Run("NilSigil", func(t *testing.T) {
+		trix := &Trix{
+			Header:  map[string]interface{}{},
+			Payload: []byte("some data"),
+			Sigils:  []Sigil{nil},
+		}
+
+		_, err := Encode(trix, "UGLY")
+		assert.Error(t, err)
+		assert.Equal(t, ErrNilSigil, err)
 	})
 }
