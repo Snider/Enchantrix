@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Snider/Enchantrix/pkg/crypt/std/chachapoly"
-	"github.com/Snider/Enchantrix/trix"
+	"github.com/Snider/Enchantrix/pkg/trix"
 )
 
 func main() {
