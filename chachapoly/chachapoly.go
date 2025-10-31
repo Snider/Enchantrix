@@ -10,9 +10,6 @@ import (
 
 // Encrypt encrypts data using ChaCha20-Poly1305.
 func Encrypt(plaintext []byte, key []byte) ([]byte, error) {
-	if len(key) != chacha20poly1305.KeySize {
-		return nil, fmt.Errorf("invalid key size: got %d bytes, want %d bytes", len(key), chacha20poly1305.KeySize)
-	}
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return nil, err
@@ -28,9 +25,6 @@ func Encrypt(plaintext []byte, key []byte) ([]byte, error) {
 
 // Decrypt decrypts data using ChaCha20-Poly1305.
 func Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
-	if len(key) != chacha20poly1305.KeySize {
-		return nil, fmt.Errorf("invalid key size: got %d bytes, want %d bytes", len(key), chacha20poly1305.KeySize)
-	}
 	aead, err := chacha20poly1305.NewX(key)
 	if err != nil {
 		return nil, err
@@ -43,5 +37,14 @@ func Decrypt(ciphertext []byte, key []byte) ([]byte, error) {
 
 	nonce, ciphertext := ciphertext[:aead.NonceSize()], ciphertext[aead.NonceSize():]
 
-	return aead.Open(nil, nonce, ciphertext, nil)
+	decrypted, err := aead.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(decrypted) == 0 {
+		return []byte{}, nil
+	}
+
+	return decrypted, nil
 }
