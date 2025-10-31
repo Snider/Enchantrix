@@ -41,6 +41,7 @@ func main() {
 	trixContainer := &trix.Trix{
 		Header:  header,
 		Payload: actualCiphertext,
+		Sigils:  []trix.Sigil{&trix.ReverseSigil{}},
 	}
 
 	// 4. Encode the .trix container into its binary format
@@ -57,6 +58,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to decode .trix container: %v", err)
 	}
+
+	// Manually apply the Out method of the sigil to restore the original payload.
+	restoredPayload, err := trixContainer.Sigils[0].Out(decodedTrix.Payload)
+	if err != nil {
+		log.Fatalf("Failed to apply sigil: %v", err)
+	}
+	decodedTrix.Payload = restoredPayload
 
 	// 6. Reassemble the ciphertext (nonce + payload) and decrypt
 	retrievedNonceStr, ok := decodedTrix.Header["nonce"].(string)

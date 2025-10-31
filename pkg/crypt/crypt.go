@@ -61,10 +61,14 @@ func (s *Service) Hash(lib HashType, payload string) string {
 // Luhn validates a number using the Luhn algorithm.
 func (s *Service) Luhn(payload string) bool {
 	payload = strings.ReplaceAll(payload, " ", "")
+	if len(payload) <= 1 {
+		return false
+	}
+
 	sum := 0
-	isSecond := false
-	for i := len(payload) - 1; i >= 0; i-- {
-		digit, err := strconv.Atoi(string(payload[i]))
+	isSecond := len(payload)%2 == 0
+	for _, r := range payload {
+		digit, err := strconv.Atoi(string(r))
 		if err != nil {
 			return false // Contains non-digit
 		}
