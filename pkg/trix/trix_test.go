@@ -127,27 +127,24 @@ func (s *FailingSigil) Out(data []byte) ([]byte, error) {
 	return nil, s.err
 }
 
-func TestSigilPipeline_Good(t *testing.T) {
+func TestPackUnpack_Good(t *testing.T) {
 	originalPayload := []byte("hello world")
 	trix := &Trix{
 		Header:  map[string]interface{}{},
 		Payload: originalPayload,
-		Sigils:  []Sigil{&ReverseSigil{}},
+		Sigils:  []Sigil{&ReverseSigil{}, &ReverseSigil{}}, // Double reverse should be original
 	}
 
-	encoded, err := Encode(trix, "SIGL")
+	err := trix.Pack()
 	assert.NoError(t, err)
+	assert.Equal(t, originalPayload, trix.Payload) // Should be back to the original
 
-	decoded, err := Decode(encoded, "SIGL")
+	err = trix.Unpack()
 	assert.NoError(t, err)
-
-	// Manually apply the Out method to restore the original payload.
-	restoredPayload, err := trix.Sigils[0].Out(decoded.Payload)
-	assert.NoError(t, err)
-	assert.Equal(t, originalPayload, restoredPayload)
+	assert.Equal(t, originalPayload, trix.Payload) // Should be back to the original again
 }
 
-func TestSigilPipeline_Bad(t *testing.T) {
+func TestPackUnpack_Bad(t *testing.T) {
 	expectedErr := errors.New("sigil failed")
 	trix := &Trix{
 		Header:  map[string]interface{}{},
@@ -155,12 +152,12 @@ func TestSigilPipeline_Bad(t *testing.T) {
 		Sigils:  []Sigil{&ReverseSigil{}, &FailingSigil{err: expectedErr}},
 	}
 
-	_, err := Encode(trix, "FAIL")
+	err := trix.Pack()
 	assert.Error(t, err)
 	assert.Equal(t, expectedErr, err)
 }
 
-func TestSigilPipeline_Ugly(t *testing.T) {
+func TestPackUnpack_Ugly(t *testing.T) {
 	t.Run("NilSigil", func(t *testing.T) {
 		trix := &Trix{
 			Header:  map[string]interface{}{},
@@ -168,7 +165,7 @@ func TestSigilPipeline_Ugly(t *testing.T) {
 			Sigils:  []Sigil{nil},
 		}
 
-		_, err := Encode(trix, "UGLY")
+		err := trix.Pack()
 		assert.Error(t, err)
 		assert.Equal(t, ErrNilSigil, err)
 	})

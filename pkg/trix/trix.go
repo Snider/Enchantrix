@@ -39,19 +39,6 @@ func Encode(trix *Trix, magicNumber string) ([]byte, error) {
 		return nil, ErrMagicNumberLength
 	}
 
-	// Apply sigils to the payload before encoding
-	payload := trix.Payload
-	for _, sigil := range trix.Sigils {
-		if sigil == nil {
-			return nil, ErrNilSigil
-		}
-		var err error
-		payload, err = sigil.In(payload)
-		if err != nil {
-			return nil, err
-		}
-	}
-
 	headerBytes, err := json.Marshal(trix.Header)
 	if err != nil {
 		return nil, err
@@ -81,7 +68,7 @@ func Encode(trix *Trix, magicNumber string) ([]byte, error) {
 	}
 
 	// Write Payload
-	if _, err := buf.Write(payload); err != nil {
+	if _, err := buf.Write(trix.Payload); err != nil {
 		return nil, err
 	}
 
@@ -141,6 +128,37 @@ func Decode(data []byte, magicNumber string) (*Trix, error) {
 		Header:  header,
 		Payload: payload,
 	}, nil
+}
+
+// Pack applies the In method of all attached sigils to the payload.
+func (t *Trix) Pack() error {
+	for _, sigil := range t.Sigils {
+		if sigil == nil {
+			return ErrNilSigil
+		}
+		var err error
+		t.Payload, err = sigil.In(t.Payload)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// Unpack applies the Out method of all sigils in reverse order.
+func (t *Trix) Unpack() error {
+	for i := len(t.Sigils) - 1; i >= 0; i-- {
+		sigil := t.Sigils[i]
+		if sigil == nil {
+			return ErrNilSigil
+		}
+		var err error
+		t.Payload, err = sigil.Out(t.Payload)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ReverseSigil is an example Sigil that reverses the bytes of the payload.
