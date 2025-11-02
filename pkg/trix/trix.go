@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	Version = 2
+	Version       = 2
+	MaxHeaderSize = 16 * 1024 * 1024 // 16 MB
 )
 
 var (
@@ -22,7 +23,7 @@ var (
 	ErrMagicNumberLength  = errors.New("trix: magic number must be 4 bytes long")
 	ErrNilSigil           = errors.New("trix: sigil cannot be nil")
 	ErrChecksumMismatch   = errors.New("trix: checksum mismatch")
-	ErrInvalidHeaderLength = errors.New("trix: invalid header length")
+	ErrHeaderTooLarge     = errors.New("trix: header size exceeds maximum allowed")
 )
 
 // Trix represents the structure of a .trix file.
@@ -34,10 +35,10 @@ type Trix struct {
 	ChecksumAlgo crypt.HashType `json:"-"`
 }
 
-// EncodeTo serializes a Trix struct into the .trix binary format and writes it to an io.Writer.
-func EncodeTo(trix *Trix, magicNumber string, w io.Writer) error {
+// Encode serializes a Trix struct into the .trix binary format.
+func Encode(trix *Trix, magicNumber string) ([]byte, error) {
 	if len(magicNumber) != 4 {
-		return ErrMagicNumberLength
+		return nil, ErrMagicNumberLength
 	}
 
 	// Calculate and add checksum if an algorithm is specified
@@ -49,57 +50,52 @@ func EncodeTo(trix *Trix, magicNumber string, w io.Writer) error {
 
 	headerBytes, err := json.Marshal(trix.Header)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	headerLength := uint32(len(headerBytes))
 
+	buf := new(bytes.Buffer)
+
 	// Write Magic Number
-	if _, err := io.WriteString(w, magicNumber); err != nil {
-		return err
+	if _, err := buf.WriteString(magicNumber); err != nil {
+		return nil, err
 	}
 
 	// Write Version
-	if _, err := w.Write([]byte{byte(Version)}); err != nil {
-		return err
+	if err := buf.WriteByte(byte(Version)); err != nil {
+		return nil, err
 	}
 
 	// Write Header Length
-	if err := binary.Write(w, binary.BigEndian, headerLength); err != nil {
-		return err
+	if err := binary.Write(buf, binary.BigEndian, headerLength); err != nil {
+		return nil, err
 	}
 
 	// Write JSON Header
-	if _, err := w.Write(headerBytes); err != nil {
-		return err
+	if _, err := buf.Write(headerBytes); err != nil {
+		return nil, err
 	}
 
 	// Write Payload
-	if _, err := w.Write(trix.Payload); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Encode serializes a Trix struct into the .trix binary format.
-func Encode(trix *Trix, magicNumber string) ([]byte, error) {
-	var buf bytes.Buffer
-	err := EncodeTo(trix, magicNumber, &buf)
-	if err != nil {
+	if _, err := buf.Write(trix.Payload); err != nil {
 		return nil, err
 	}
+
 	return buf.Bytes(), nil
 }
 
-// DecodeFrom deserializes the .trix binary format from an io.Reader into a Trix struct.
-func DecodeFrom(r io.Reader, magicNumber string) (*Trix, error) {
+// Decode deserializes the .trix binary format into a Trix struct.
+// Note: Sigils are not stored in the format and must be re-attached by the caller.
+func Decode(data []byte, magicNumber string) (*Trix, error) {
 	if len(magicNumber) != 4 {
 		return nil, ErrMagicNumberLength
 	}
 
+	buf := bytes.NewReader(data)
+
 	// Read and Verify Magic Number
 	magic := make([]byte, 4)
-	if _, err := io.ReadFull(r, magic); err != nil {
+	if _, err := io.ReadFull(buf, magic); err != nil {
 		return nil, err
 	}
 	if string(magic) != magicNumber {
@@ -107,26 +103,28 @@ func DecodeFrom(r io.Reader, magicNumber string) (*Trix, error) {
 	}
 
 	// Read and Verify Version
-	versionByte := make([]byte, 1)
-	if _, err := io.ReadFull(r, versionByte); err != nil {
+	version, err := buf.ReadByte()
+	if err != nil {
 		return nil, err
 	}
-	if versionByte[0] != Version {
+	if version != Version {
 		return nil, ErrInvalidVersion
 	}
 
 	// Read Header Length
 	var headerLength uint32
-	if err := binary.Read(r, binary.BigEndian, &headerLength); err != nil {
+	if err := binary.Read(buf, binary.BigEndian, &headerLength); err != nil {
 		return nil, err
 	}
 
-	// We can't implement the ErrInvalidHeaderLength check here because we don't know the total length of the stream.
-	// The check is implicitly handled by io.ReadFull, which will return io.ErrUnexpectedEOF if the stream ends prematurely.
+	// Sanity check the header length to prevent massive allocations.
+	if headerLength > MaxHeaderSize {
+		return nil, ErrHeaderTooLarge
+	}
 
 	// Read JSON Header
 	headerBytes := make([]byte, headerLength)
-	if _, err := io.ReadFull(r, headerBytes); err != nil {
+	if _, err := io.ReadFull(buf, headerBytes); err != nil {
 		return nil, err
 	}
 	var header map[string]interface{}
@@ -135,7 +133,7 @@ func DecodeFrom(r io.Reader, magicNumber string) (*Trix, error) {
 	}
 
 	// Read Payload
-	payload, err := io.ReadAll(r)
+	payload, err := io.ReadAll(buf)
 	if err != nil {
 		return nil, err
 	}
@@ -156,26 +154,6 @@ func DecodeFrom(r io.Reader, magicNumber string) (*Trix, error) {
 		Header:  header,
 		Payload: payload,
 	}, nil
-}
-
-// Decode deserializes the .trix binary format into a Trix struct.
-// Note: Sigils are not stored in the format and must be re-attached by the caller.
-func Decode(data []byte, magicNumber string) (*Trix, error) {
-	buf := bytes.NewReader(data)
-
-	// We can perform the header length check here because we have the full byte slice.
-	// We read the header length, check it, then pass the rest of the buffer to DecodeFrom.
-	// This is a bit of a hack, but it's the only way to keep the check.
-	// A better solution would be to have a separate DecodeBytes function.
-	if len(data) > 9 { // 4 magic + 1 version + 4 header length
-		headerLengthBytes := data[5:9]
-		headerLength := binary.BigEndian.Uint32(headerLengthBytes)
-		if int64(headerLength) > int64(len(data)-9) {
-			return nil, ErrInvalidHeaderLength
-		}
-	}
-
-	return DecodeFrom(buf, magicNumber)
 }
 
 // Pack applies the In method of all attached sigils to the payload.
