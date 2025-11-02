@@ -82,7 +82,7 @@ func demoTrix() {
 	if err != nil {
 		log.Fatalf("Failed to encode .trix container: %v", err)
 	}
-	fmt.Println("Successfully created .trix container.\n")
+	fmt.Println("Successfully created .trix container.")
 
 	// --- DECODING ---
 	fmt.Println("--- DECODING ---")
