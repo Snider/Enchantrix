@@ -4,7 +4,7 @@ tasks:
   test:
     desc: "Run all tests"
     cmds:
-      - go test -v ./...
+      - go test -v -coverpkg=github.com/Snider/Enchantrix/pkg/crypt,github.com/Snider/Enchantrix/pkg/enchantrix,github.com/Snider/Enchantrix/pkg/trix ./...
 
   build:
     desc: "Build the project"
