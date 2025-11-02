@@ -201,8 +201,7 @@ func TestChecksum_Bad(t *testing.T) {
 	encoded[len(encoded)-1] = 0 // Tamper with the payload
 
 	_, err = trix.Decode(encoded, "CHCK")
-	assert.Error(t, err)
-	assert.Equal(t, trix.ErrChecksumMismatch, err)
+	assert.ErrorIs(t, err, trix.ErrChecksumMismatch)
 }
 
 func TestChecksum_Ugly(t *testing.T) {
