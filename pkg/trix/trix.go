@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	Version = 2
+	Version       = 2
+	MaxHeaderSize = 16 * 1024 * 1024 // 16 MB
 )
 
 var (
@@ -22,6 +23,7 @@ var (
 	ErrMagicNumberLength  = errors.New("trix: magic number must be 4 bytes long")
 	ErrNilSigil           = errors.New("trix: sigil cannot be nil")
 	ErrChecksumMismatch   = errors.New("trix: checksum mismatch")
+	ErrHeaderTooLarge     = errors.New("trix: header size exceeds maximum allowed")
 )
 
 // Trix represents the structure of a .trix file.
@@ -113,6 +115,11 @@ func Decode(data []byte, magicNumber string) (*Trix, error) {
 	var headerLength uint32
 	if err := binary.Read(buf, binary.BigEndian, &headerLength); err != nil {
 		return nil, err
+	}
+
+	// Sanity check the header length to prevent massive allocations.
+	if headerLength > MaxHeaderSize {
+		return nil, ErrHeaderTooLarge
 	}
 
 	// Read JSON Header
