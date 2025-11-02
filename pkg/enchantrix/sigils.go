@@ -73,12 +73,18 @@ func (s *Base64Sigil) Out(data []byte) ([]byte, error) {
 }
 
 // GzipSigil is a Sigil that compresses/decompresses data using gzip.
-type GzipSigil struct{}
+type GzipSigil struct {
+	writer io.Writer
+}
 
 // In compresses the data using gzip.
 func (s *GzipSigil) In(data []byte) ([]byte, error) {
 	var b bytes.Buffer
-	gz := gzip.NewWriter(&b)
+	w := s.writer
+	if w == nil {
+		w = &b
+	}
+	gz := gzip.NewWriter(w)
 	if _, err := gz.Write(data); err != nil {
 		return nil, err
 	}
