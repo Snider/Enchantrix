@@ -1,7 +1,9 @@
 package trix
 
 import (
+	"bytes"
 	"encoding/binary"
+	"errors"
 	"reflect"
 	"testing"
 
@@ -164,6 +166,62 @@ func TestPackUnpack_Ugly(t *testing.T) {
 }
 
 // --- Checksum Tests ---
+
+// --- Stream Tests ---
+
+// mockErrorWriter is an io.Writer that always returns an error.
+type mockErrorWriter struct{}
+
+func (w *mockErrorWriter) Write(p []byte) (n int, err error) {
+	return 0, errors.New("mock writer error")
+}
+
+// mockErrorReader is an io.Reader that always returns an error.
+type mockErrorReader struct{}
+
+func (r *mockErrorReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("mock reader error")
+}
+
+func TestStream_Good(t *testing.T) {
+	trix := &Trix{
+		Header:  map[string]interface{}{"content_type": "text/plain"},
+		Payload: []byte("hello world"),
+	}
+	magicNumber := "STRM"
+
+	var buf bytes.Buffer
+	err := EncodeTo(trix, magicNumber, &buf)
+	assert.NoError(t, err)
+
+	decoded, err := DecodeFrom(&buf, magicNumber)
+	assert.NoError(t, err)
+
+	assert.True(t, reflect.DeepEqual(trix.Header, decoded.Header))
+	assert.Equal(t, trix.Payload, decoded.Payload)
+}
+
+func TestStream_Bad(t *testing.T) {
+	t.Run("WriterError", func(t *testing.T) {
+		trix := &Trix{Header: map[string]interface{}{}, Payload: []byte("payload")}
+		err := EncodeTo(trix, "FAIL", &mockErrorWriter{})
+		assert.Error(t, err)
+		assert.EqualError(t, err, "mock writer error")
+	})
+
+	t.Run("ReaderError", func(t *testing.T) {
+		_, err := DecodeFrom(&mockErrorReader{}, "FAIL")
+		assert.Error(t, err)
+		assert.EqualError(t, err, "mock reader error")
+	})
+}
+
+func TestStream_Ugly(t *testing.T) {
+	t.Run("EmptyReader", func(t *testing.T) {
+		_, err := DecodeFrom(bytes.NewReader([]byte{}), "UGLY")
+		assert.Error(t, err)
+	})
+}
 
 func TestChecksum_Ugly(t *testing.T) {
 	t.Run("MissingAlgoInHeader", func(t *testing.T) {
