@@ -182,14 +182,14 @@ func demoRSA() {
 	// 2. Encrypt a message
 	message := []byte("This is a secret message for RSA.")
 	fmt.Printf("\nOriginal message: %s\n", message)
-	ciphertext, err := cryptService.EncryptRSA(publicKey, message, nil)
+	ciphertext, err := cryptService.EncryptRSA(publicKey, message)
 	if err != nil {
 		log.Fatalf("Failed to encrypt with RSA: %v", err)
 	}
 	fmt.Printf("Encrypted ciphertext (base64): %s\n", base64.StdEncoding.EncodeToString(ciphertext))
 
 	// 3. Decrypt the message
-	decrypted, err := cryptService.DecryptRSA(privateKey, ciphertext, nil)
+	decrypted, err := cryptService.DecryptRSA(privateKey, ciphertext)
 	if err != nil {
 		log.Fatalf("Failed to decrypt with RSA: %v", err)
 	}

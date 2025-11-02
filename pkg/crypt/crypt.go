@@ -151,13 +151,13 @@ func (s *Service) GenerateRSAKeyPair(bits int) (publicKey, privateKey []byte, er
 }
 
 // EncryptRSA encrypts data with a public key.
-func (s *Service) EncryptRSA(publicKey, data, label []byte) ([]byte, error) {
+func (s *Service) EncryptRSA(publicKey, data []byte) ([]byte, error) {
 	s.ensureRSA()
-	return s.rsa.Encrypt(publicKey, data, label)
+	return s.rsa.Encrypt(publicKey, data, nil)
 }
 
 // DecryptRSA decrypts data with a private key.
-func (s *Service) DecryptRSA(privateKey, ciphertext, label []byte) ([]byte, error) {
+func (s *Service) DecryptRSA(privateKey, ciphertext []byte) ([]byte, error) {
 	s.ensureRSA()
-	return s.rsa.Decrypt(privateKey, ciphertext, label)
+	return s.rsa.Decrypt(privateKey, ciphertext, nil)
 }

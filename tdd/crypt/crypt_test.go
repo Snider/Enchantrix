@@ -109,7 +109,6 @@ func TestFletcher64_Ugly(t *testing.T) {
 // --- RSA Tests ---
 
 func TestRSA_Good(t *testing.T) {
-	service := crypt.NewService()
 	pubKey, privKey, err := service.GenerateRSAKeyPair(2048)
 	assert.NoError(t, err)
 	assert.NotNil(t, pubKey)
@@ -117,58 +116,45 @@ func TestRSA_Good(t *testing.T) {
 
 	// Test encryption and decryption
 	message := []byte("secret message")
-	label := []byte("test label")
-	ciphertext, err := service.EncryptRSA(pubKey, message, label)
+	ciphertext, err := service.EncryptRSA(pubKey, message)
 	assert.NoError(t, err)
-	plaintext, err := service.DecryptRSA(privKey, ciphertext, label)
+	plaintext, err := service.DecryptRSA(privKey, ciphertext)
 	assert.NoError(t, err)
 	assert.Equal(t, message, plaintext)
 }
 
 func TestRSA_Bad(t *testing.T) {
-	service := crypt.NewService()
-
 	// Test with a key size that is too small
 	_, _, err := service.GenerateRSAKeyPair(1024)
 	assert.Error(t, err)
 
 	// Test decryption with the wrong key
-	pubKey, privKey, err := service.GenerateRSAKeyPair(2048)
+	pubKey, _, err := service.GenerateRSAKeyPair(2048)
 	assert.NoError(t, err)
 	_, otherPrivKey, err := service.GenerateRSAKeyPair(2048)
 	assert.NoError(t, err)
 	message := []byte("secret message")
-	ciphertext, err := service.EncryptRSA(pubKey, message, nil)
+	ciphertext, err := service.EncryptRSA(pubKey, message)
 	assert.NoError(t, err)
-	_, err = service.DecryptRSA(otherPrivKey, ciphertext, nil)
-	assert.Error(t, err)
-
-	// Test decryption with wrong label
-	label1 := []byte("label1")
-	label2 := []byte("label2")
-	ciphertext, err = service.EncryptRSA(pubKey, message, label1)
-	assert.NoError(t, err)
-	_, err = service.DecryptRSA(privKey, ciphertext, label2)
+	_, err = service.DecryptRSA(otherPrivKey, ciphertext)
 	assert.Error(t, err)
 }
 
 func TestRSA_Ugly(t *testing.T) {
-	service := crypt.NewService()
-
 	// Test with malformed keys
-	_, err := service.EncryptRSA([]byte("not a real key"), []byte("message"), nil)
+	_, err := service.EncryptRSA([]byte("not a real key"), []byte("message"))
 	assert.Error(t, err)
 
-	_, err = service.DecryptRSA([]byte("not a real key"), []byte("message"), nil)
+	_, err = service.DecryptRSA([]byte("not a real key"), []byte("message"))
 	assert.Error(t, err)
 
 	// Test with empty message
 	pubKey, privKey, err := service.GenerateRSAKeyPair(2048)
 	assert.NoError(t, err)
 	message := []byte("")
-	ciphertext, err := service.EncryptRSA(pubKey, message, nil)
+	ciphertext, err := service.EncryptRSA(pubKey, message)
 	assert.NoError(t, err)
-	plaintext, err := service.DecryptRSA(privKey, ciphertext, nil)
+	plaintext, err := service.DecryptRSA(privKey, ciphertext)
 	assert.NoError(t, err)
 	assert.Equal(t, message, plaintext)
 }

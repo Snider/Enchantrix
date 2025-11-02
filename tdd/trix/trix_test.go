@@ -70,8 +70,11 @@ func TestTrixEncodeDecode_Bad(t *testing.T) {
 			Header:  map[string]interface{}{"large": string(data)},
 			Payload: []byte("payload"),
 		}
-		_, err := trix.Encode(trixOb, "TRIX")
+		encoded, err := trix.Encode(trixOb, "TRIX")
 		assert.NoError(t, err)
+
+		_, err = trix.Decode(encoded, "TRIX")
+		assert.ErrorIs(t, err, trix.ErrHeaderTooLarge)
 	})
 }
 
