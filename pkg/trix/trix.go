@@ -22,6 +22,7 @@ var (
 	ErrMagicNumberLength  = errors.New("trix: magic number must be 4 bytes long")
 	ErrNilSigil           = errors.New("trix: sigil cannot be nil")
 	ErrChecksumMismatch   = errors.New("trix: checksum mismatch")
+	ErrInvalidHeaderLength = errors.New("trix: invalid header length")
 )
 
 // Trix represents the structure of a .trix file.
@@ -113,6 +114,11 @@ func Decode(data []byte, magicNumber string) (*Trix, error) {
 	var headerLength uint32
 	if err := binary.Read(buf, binary.BigEndian, &headerLength); err != nil {
 		return nil, err
+	}
+
+	// Check if the announced header length is longer than the remaining buffer.
+	if int64(headerLength) > int64(buf.Len()) {
+		return nil, ErrInvalidHeaderLength
 	}
 
 	// Read JSON Header

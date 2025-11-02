@@ -1,7 +1,7 @@
 package trix
 
 import (
-	"io"
+	"encoding/binary"
 	"reflect"
 	"testing"
 
@@ -52,6 +52,12 @@ func TestTrixEncodeDecode_Bad(t *testing.T) {
 		assert.EqualError(t, err, "trix: magic number must be 4 bytes long")
 	})
 
+	t.Run("InvalidVersion", func(t *testing.T) {
+		buf := []byte("TRIX\x03\x00\x00\x00\x02{}" + "payload") // Version 3
+		_, err := Decode(buf, "TRIX")
+		assert.Equal(t, ErrInvalidVersion, err)
+	})
+
 	t.Run("MalformedHeaderJSON", func(t *testing.T) {
 		// Create a Trix struct with a header that cannot be marshaled to JSON.
 		header := map[string]interface{}{
@@ -80,7 +86,7 @@ func TestTrixEncodeDecode_Ugly(t *testing.T) {
 
 		_, err := Decode(buf, magicNumber)
 		assert.Error(t, err)
-		assert.Equal(t, err, io.ErrUnexpectedEOF)
+		assert.Equal(t, err, ErrInvalidHeaderLength)
 	})
 
 	t.Run("DataTooShort", func(t *testing.T) {
@@ -144,7 +150,42 @@ func TestPackUnpack_Bad(t *testing.T) {
 	assert.Contains(t, err.Error(), "unknown sigil name")
 }
 
+func TestPackUnpack_Ugly(t *testing.T) {
+	t.Run("NilPayload", func(t *testing.T) {
+		trix := &Trix{
+			Header:   map[string]interface{}{},
+			Payload:  nil,
+			InSigils: []string{"reverse"},
+		}
+
+		err := trix.Pack()
+		assert.NoError(t, err)
+	})
+}
+
 // --- Checksum Tests ---
+
+func TestChecksum_Ugly(t *testing.T) {
+	t.Run("MissingAlgoInHeader", func(t *testing.T) {
+		header := `{"checksum":"5891b5b522d5df086d0ff0b110fbd9d21bb4fc7163af34d08286a2e846f6be03"}` // sha256 checksum for "hello world"
+		payload := "hello world"
+		magicNumber := "UGLY"
+
+		var buf []byte
+		buf = append(buf, []byte(magicNumber)...)
+		buf = append(buf, byte(Version))
+		headerLen := uint32(len(header))
+		headerLenBytes := make([]byte, 4)
+		binary.BigEndian.PutUint32(headerLenBytes, headerLen)
+		buf = append(buf, headerLenBytes...)
+		buf = append(buf, []byte(header)...)
+		buf = append(buf, []byte(payload)...)
+
+		_, err := Decode(buf, magicNumber)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "checksum algorithm not found in header")
+	})
+}
 
 func TestChecksum_Good(t *testing.T) {
 	trix := &Trix{
@@ -177,26 +218,3 @@ func TestChecksum_Bad(t *testing.T) {
 	assert.Equal(t, ErrChecksumMismatch, err)
 }
 
-func TestChecksum_Ugly(t *testing.T) {
-	t.Run("MissingAlgoInHeader", func(t *testing.T) {
-		trix := &Trix{
-			Header:       map[string]interface{}{},
-			Payload:      []byte("hello world"),
-			ChecksumAlgo: crypt.SHA256,
-		}
-		encoded, err := Encode(trix, "UGLY")
-		assert.NoError(t, err)
-
-		// Manually decode to tamper with the header
-		decoded, err := Decode(encoded, "UGLY")
-		assert.NoError(t, err)
-		delete(decoded.Header, "checksum_algo")
-
-		// Re-encode with the tampered header
-		tamperedEncoded, err := Encode(decoded, "UGLY")
-		assert.NoError(t, err)
-
-		_, err = Decode(tamperedEncoded, "UGLY")
-		assert.Error(t, err)
-	})
-}
