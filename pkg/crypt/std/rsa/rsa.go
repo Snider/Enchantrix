@@ -19,6 +19,9 @@ func NewService() *Service {
 
 // GenerateKeyPair creates a new RSA key pair.
 func (s *Service) GenerateKeyPair(bits int) (publicKey, privateKey []byte, err error) {
+	if bits < 2048 {
+		return nil, nil, fmt.Errorf("rsa: key size too small: %d (minimum 2048)", bits)
+	}
 	privKey, err := rsa.GenerateKey(rand.Reader, bits)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to generate private key: %w", err)
@@ -43,7 +46,7 @@ func (s *Service) GenerateKeyPair(bits int) (publicKey, privateKey []byte, err e
 }
 
 // Encrypt encrypts data with a public key.
-func (s *Service) Encrypt(publicKey, data []byte) ([]byte, error) {
+func (s *Service) Encrypt(publicKey, data, label []byte) ([]byte, error) {
 	block, _ := pem.Decode(publicKey)
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode public key")
@@ -59,7 +62,7 @@ func (s *Service) Encrypt(publicKey, data []byte) ([]byte, error) {
 		return nil, fmt.Errorf("not an RSA public key")
 	}
 
-	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, rsaPub, data, nil)
+	ciphertext, err := rsa.EncryptOAEP(sha256.New(), rand.Reader, rsaPub, data, label)
 	if err != nil {
 		return nil, fmt.Errorf("failed to encrypt data: %w", err)
 	}
@@ -68,7 +71,7 @@ func (s *Service) Encrypt(publicKey, data []byte) ([]byte, error) {
 }
 
 // Decrypt decrypts data with a private key.
-func (s *Service) Decrypt(privateKey, ciphertext []byte) ([]byte, error) {
+func (s *Service) Decrypt(privateKey, ciphertext, label []byte) ([]byte, error) {
 	block, _ := pem.Decode(privateKey)
 	if block == nil {
 		return nil, fmt.Errorf("failed to decode private key")
@@ -79,7 +82,7 @@ func (s *Service) Decrypt(privateKey, ciphertext []byte) ([]byte, error) {
 		return nil, fmt.Errorf("failed to parse private key: %w", err)
 	}
 
-	plaintext, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, priv, ciphertext, nil)
+	plaintext, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, priv, ciphertext, label)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt data: %w", err)
 	}

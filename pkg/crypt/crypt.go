@@ -137,17 +137,27 @@ func (s *Service) Fletcher64(payload string) uint64 {
 
 // --- RSA ---
 
+// ensureRSA initializes the RSA service if it is not already.
+func (s *Service) ensureRSA() {
+	if s.rsa == nil {
+		s.rsa = rsa.NewService()
+	}
+}
+
 // GenerateRSAKeyPair creates a new RSA key pair.
 func (s *Service) GenerateRSAKeyPair(bits int) (publicKey, privateKey []byte, err error) {
+	s.ensureRSA()
 	return s.rsa.GenerateKeyPair(bits)
 }
 
 // EncryptRSA encrypts data with a public key.
-func (s *Service) EncryptRSA(publicKey, data []byte) ([]byte, error) {
-	return s.rsa.Encrypt(publicKey, data)
+func (s *Service) EncryptRSA(publicKey, data, label []byte) ([]byte, error) {
+	s.ensureRSA()
+	return s.rsa.Encrypt(publicKey, data, label)
 }
 
 // DecryptRSA decrypts data with a private key.
-func (s *Service) DecryptRSA(privateKey, ciphertext []byte) ([]byte, error) {
-	return s.rsa.Decrypt(privateKey, ciphertext)
+func (s *Service) DecryptRSA(privateKey, ciphertext, label []byte) ([]byte, error) {
+	s.ensureRSA()
+	return s.rsa.Decrypt(privateKey, ciphertext, label)
 }
