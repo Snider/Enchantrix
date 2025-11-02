@@ -2,9 +2,9 @@ version: '3'
 
 tasks:
   test:
-    desc: "Run all tests"
+    desc: "Run all tests and generate a coverage report"
     cmds:
-      - go test -v ./...
+      - go test -v -coverprofile=coverage.out ./...
 
   build:
     desc: "Build the project"
