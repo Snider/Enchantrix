@@ -75,6 +75,7 @@ func TestFletcher16_Good(t *testing.T) {
 func TestFletcher16_Ugly(t *testing.T) {
 	assert.Equal(t, uint16(0), service.Fletcher16(""), "Checksum of empty string should be 0")
 	assert.Equal(t, uint16(0), service.Fletcher16("\x00"), "Checksum of null byte should be 0")
+	assert.NotEqual(t, uint16(0), service.Fletcher16(" "), "Checksum of space should not be 0")
 }
 
 // Fletcher32 Tests
@@ -88,6 +89,7 @@ func TestFletcher32_Ugly(t *testing.T) {
 	assert.Equal(t, uint32(0), service.Fletcher32(""), "Checksum of empty string should be 0")
 	// Test odd length string to check padding
 	assert.NotEqual(t, uint32(0), service.Fletcher32("a"), "Checksum of odd length string")
+	assert.NotEqual(t, uint32(0), service.Fletcher32(" "), "Checksum of space should not be 0")
 }
 
 // Fletcher64 Tests
@@ -103,6 +105,7 @@ func TestFletcher64_Ugly(t *testing.T) {
 	assert.NotEqual(t, uint64(0), service.Fletcher64("a"), "Checksum of length 1 string")
 	assert.NotEqual(t, uint64(0), service.Fletcher64("ab"), "Checksum of length 2 string")
 	assert.NotEqual(t, uint64(0), service.Fletcher64("abc"), "Checksum of length 3 string")
+	assert.NotEqual(t, uint64(0), service.Fletcher64(" "), "Checksum of space should not be 0")
 }
 
 // --- RSA Tests ---

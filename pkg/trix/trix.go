@@ -36,7 +36,7 @@ type Trix struct {
 }
 
 // Encode serializes a Trix struct into the .trix binary format.
-func Encode(trix *Trix, magicNumber string) ([]byte, error) {
+func Encode(trix *Trix, magicNumber string, w io.Writer) ([]byte, error) {
 	if len(magicNumber) != 4 {
 		return nil, ErrMagicNumberLength
 	}
@@ -54,48 +54,67 @@ func Encode(trix *Trix, magicNumber string) ([]byte, error) {
 	}
 	headerLength := uint32(len(headerBytes))
 
-	buf := new(bytes.Buffer)
+	// If no writer is provided, use an internal buffer.
+	// This maintains the original function signature's behavior of returning the byte slice.
+	var buf *bytes.Buffer
+	writer := w
+	if writer == nil {
+		buf = new(bytes.Buffer)
+		writer = buf
+	}
 
 	// Write Magic Number
-	if _, err := buf.WriteString(magicNumber); err != nil {
+	if _, err := io.WriteString(writer, magicNumber); err != nil {
 		return nil, err
 	}
 
 	// Write Version
-	if err := buf.WriteByte(byte(Version)); err != nil {
+	if _, err := writer.Write([]byte{byte(Version)}); err != nil {
 		return nil, err
 	}
 
 	// Write Header Length
-	if err := binary.Write(buf, binary.BigEndian, headerLength); err != nil {
+	if err := binary.Write(writer, binary.BigEndian, headerLength); err != nil {
 		return nil, err
 	}
 
 	// Write JSON Header
-	if _, err := buf.Write(headerBytes); err != nil {
+	if _, err := writer.Write(headerBytes); err != nil {
 		return nil, err
 	}
 
 	// Write Payload
-	if _, err := buf.Write(trix.Payload); err != nil {
+	if _, err := writer.Write(trix.Payload); err != nil {
 		return nil, err
 	}
 
-	return buf.Bytes(), nil
+	// If we used our internal buffer, return its bytes.
+	if buf != nil {
+		return buf.Bytes(), nil
+	}
+
+	// If an external writer was used, we can't return the bytes.
+	// The caller is responsible for the writer.
+	return nil, nil
 }
 
 // Decode deserializes the .trix binary format into a Trix struct.
 // Note: Sigils are not stored in the format and must be re-attached by the caller.
-func Decode(data []byte, magicNumber string) (*Trix, error) {
+func Decode(data []byte, magicNumber string, r io.Reader) (*Trix, error) {
 	if len(magicNumber) != 4 {
 		return nil, ErrMagicNumberLength
 	}
 
-	buf := bytes.NewReader(data)
+	var reader io.Reader
+	if r != nil {
+		reader = r
+	} else {
+		reader = bytes.NewReader(data)
+	}
 
 	// Read and Verify Magic Number
 	magic := make([]byte, 4)
-	if _, err := io.ReadFull(buf, magic); err != nil {
+	if _, err := io.ReadFull(reader, magic); err != nil {
 		return nil, err
 	}
 	if string(magic) != magicNumber {
@@ -103,17 +122,17 @@ func Decode(data []byte, magicNumber string) (*Trix, error) {
 	}
 
 	// Read and Verify Version
-	version, err := buf.ReadByte()
-	if err != nil {
+	versionByte := make([]byte, 1)
+	if _, err := io.ReadFull(reader, versionByte); err != nil {
 		return nil, err
 	}
-	if version != Version {
+	if versionByte[0] != Version {
 		return nil, ErrInvalidVersion
 	}
 
 	// Read Header Length
 	var headerLength uint32
-	if err := binary.Read(buf, binary.BigEndian, &headerLength); err != nil {
+	if err := binary.Read(reader, binary.BigEndian, &headerLength); err != nil {
 		return nil, err
 	}
 
@@ -124,7 +143,7 @@ func Decode(data []byte, magicNumber string) (*Trix, error) {
 
 	// Read JSON Header
 	headerBytes := make([]byte, headerLength)
-	if _, err := io.ReadFull(buf, headerBytes); err != nil {
+	if _, err := io.ReadFull(reader, headerBytes); err != nil {
 		return nil, err
 	}
 	var header map[string]interface{}
@@ -133,7 +152,7 @@ func Decode(data []byte, magicNumber string) (*Trix, error) {
 	}
 
 	// Read Payload
-	payload, err := io.ReadAll(buf)
+	payload, err := io.ReadAll(reader)
 	if err != nil {
 		return nil, err
 	}
