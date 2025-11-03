@@ -2,10 +2,31 @@ package enchantrix
 
 import (
 	"encoding/hex"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+// mockWriter is a writer that fails on Write
+type mockWriter struct{}
+
+func (m *mockWriter) Write(p []byte) (n int, err error) {
+	return 0, errors.New("write error")
+}
+
+// failOnSecondWrite is a writer that fails on the second write call.
+type failOnSecondWrite struct {
+	callCount int
+}
+
+func (m *failOnSecondWrite) Write(p []byte) (n int, err error) {
+	m.callCount++
+	if m.callCount > 1 {
+		return 0, errors.New("second write failed")
+	}
+	return len(p), nil
+}
 
 func TestReverseSigil(t *testing.T) {
 	s := &ReverseSigil{}
@@ -67,6 +88,16 @@ func TestGzipSigil(t *testing.T) {
 	// Bad - invalid gzip data
 	_, err = s.Out([]byte("not gzip"))
 	assert.Error(t, err)
+
+	// Test writer error
+	s.writer = &mockWriter{}
+	_, err = s.In(data)
+	assert.Error(t, err)
+
+	// Test closer error
+	s.writer = &failOnSecondWrite{}
+	_, err = s.In(data)
+	assert.Error(t, err)
 }
 
 func TestJSONSigil(t *testing.T) {
@@ -83,6 +114,11 @@ func TestJSONSigil(t *testing.T) {
 	// Bad - invalid json
 	_, err = s.In([]byte("not json"))
 	assert.Error(t, err)
+
+	// Out is a no-op, so it should return the data as-is
+	outData, err := s.Out(data)
+	assert.NoError(t, err)
+	assert.Equal(t, data, outData)
 }
 
 func TestHashSigils_Good(t *testing.T) {
