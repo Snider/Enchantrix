@@ -1,6 +1,9 @@
 package trix_test
 
 import (
+	"bytes"
+	"errors"
+	"fmt"
 	"io"
 	"reflect"
 	"testing"
@@ -9,6 +12,35 @@ import (
 	"github.com/Snider/Enchantrix/pkg/trix"
 	"github.com/stretchr/testify/assert"
 )
+
+// failWriter is an io.Writer that fails on the nth write call.
+type failWriter struct {
+	failOnCall int
+	callCount  int
+}
+
+func (m *failWriter) Write(p []byte) (n int, err error) {
+	m.callCount++
+	if m.callCount == m.failOnCall {
+		return 0, errors.New("write error")
+	}
+	return len(p), nil
+}
+
+// failReader is an io.Reader that fails on the nth read call.
+type failReader struct {
+	failOnCall int
+	callCount  int
+	reader     io.Reader
+}
+
+func (m *failReader) Read(p []byte) (n int, err error) {
+	m.callCount++
+	if m.callCount == m.failOnCall {
+		return 0, errors.New("read error")
+	}
+	return m.reader.Read(p)
+}
 
 // TestTrixEncodeDecode_Good tests the ideal "happy path" scenario for encoding and decoding.
 func TestTrixEncodeDecode_Good(t *testing.T) {
@@ -22,10 +54,10 @@ func TestTrixEncodeDecode_Good(t *testing.T) {
 	trixOb := &trix.Trix{Header: header, Payload: payload}
 	magicNumber := "TRIX"
 
-	encoded, err := trix.Encode(trixOb, magicNumber)
+	encoded, err := trix.Encode(trixOb, magicNumber, nil)
 	assert.NoError(t, err)
 
-	decoded, err := trix.Decode(encoded, magicNumber)
+	decoded, err := trix.Decode(encoded, magicNumber, nil)
 	assert.NoError(t, err)
 
 	assert.True(t, reflect.DeepEqual(trixOb.Header, decoded.Header))
@@ -36,20 +68,20 @@ func TestTrixEncodeDecode_Good(t *testing.T) {
 func TestTrixEncodeDecode_Bad(t *testing.T) {
 	t.Run("MismatchedMagicNumber", func(t *testing.T) {
 		trixOb := &trix.Trix{Header: map[string]interface{}{}, Payload: []byte("payload")}
-		encoded, err := trix.Encode(trixOb, "GOOD")
+		encoded, err := trix.Encode(trixOb, "GOOD", nil)
 		assert.NoError(t, err)
 
-		_, err = trix.Decode(encoded, "BAD!")
+		_, err = trix.Decode(encoded, "BAD!", nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid magic number")
 	})
 
 	t.Run("InvalidMagicNumberLength", func(t *testing.T) {
 		trixOb := &trix.Trix{Header: map[string]interface{}{}, Payload: []byte("payload")}
-		_, err := trix.Encode(trixOb, "TOOLONG")
+		_, err := trix.Encode(trixOb, "TOOLONG", nil)
 		assert.EqualError(t, err, "trix: magic number must be 4 bytes long")
 
-		_, err = trix.Decode([]byte{}, "SHORT")
+		_, err = trix.Decode([]byte{}, "SHORT", nil)
 		assert.EqualError(t, err, "trix: magic number must be 4 bytes long")
 	})
 
@@ -59,7 +91,7 @@ func TestTrixEncodeDecode_Bad(t *testing.T) {
 			"unsupported": make(chan int), // Channels cannot be JSON-encoded
 		}
 		trixOb := &trix.Trix{Header: header, Payload: []byte("payload")}
-		_, err := trix.Encode(trixOb, "TRIX")
+		_, err := trix.Encode(trixOb, "TRIX", nil)
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "json: unsupported type")
 	})
@@ -70,10 +102,10 @@ func TestTrixEncodeDecode_Bad(t *testing.T) {
 			Header:  map[string]interface{}{"large": string(data)},
 			Payload: []byte("payload"),
 		}
-		encoded, err := trix.Encode(trixOb, "TRIX")
+		encoded, err := trix.Encode(trixOb, "TRIX", nil)
 		assert.NoError(t, err)
 
-		_, err = trix.Decode(encoded, "TRIX")
+		_, err = trix.Decode(encoded, "TRIX", nil)
 		assert.ErrorIs(t, err, trix.ErrHeaderTooLarge)
 	})
 }
@@ -91,20 +123,32 @@ func TestTrixEncodeDecode_Ugly(t *testing.T) {
 		buf = append(buf, []byte("{}")...)           // A minimal valid JSON header
 		buf = append(buf, []byte("payload")...)
 
-		_, err := trix.Decode(buf, magicNumber)
+		_, err := trix.Decode(buf, magicNumber, nil)
 		assert.Error(t, err)
 		assert.Equal(t, err, io.ErrUnexpectedEOF)
 	})
 
+	t.Run("InvalidVersion", func(t *testing.T) {
+		var buf []byte
+		buf = append(buf, []byte(magicNumber)...)
+		buf = append(buf, byte(99)) // Invalid version
+		buf = append(buf, []byte{0, 0, 0, 2}...)
+		buf = append(buf, []byte("{}")...)
+		buf = append(buf, []byte("payload")...)
+
+		_, err := trix.Decode(buf, magicNumber, nil)
+		assert.ErrorIs(t, err, trix.ErrInvalidVersion)
+	})
+
 	t.Run("DataTooShort", func(t *testing.T) {
 		data := []byte("BAD")
-		_, err := trix.Decode(data, magicNumber)
+		_, err := trix.Decode(data, magicNumber, nil)
 		assert.Error(t, err)
 	})
 
 	t.Run("EmptyPayload", func(t *testing.T) {
 		data := []byte{}
-		_, err := trix.Decode(data, magicNumber)
+		_, err := trix.Decode(data, magicNumber, nil)
 		assert.Error(t, err)
 	})
 
@@ -115,10 +159,10 @@ func TestTrixEncodeDecode_Ugly(t *testing.T) {
 		payload := []byte("some data")
 		trixOb := &trix.Trix{Header: header, Payload: payload}
 
-		encoded, err := trix.Encode(trixOb, magicNumber)
+		encoded, err := trix.Encode(trixOb, magicNumber, nil)
 		assert.NoError(t, err)
 
-		decoded, err := trix.Decode(encoded, magicNumber)
+		decoded, err := trix.Decode(encoded, magicNumber, nil)
 		assert.NoError(t, err)
 		assert.NotNil(t, decoded)
 	})
@@ -158,6 +202,11 @@ func TestPackUnpack_Bad(t *testing.T) {
 	trixOb.Payload = []byte("not hex")
 	err = trixOb.Unpack()
 	assert.Error(t, err)
+
+	trixOb.InSigils = []string{"json"}
+	trixOb.Payload = []byte("not json")
+	err = trixOb.Pack()
+	assert.Error(t, err)
 }
 
 func TestPackUnpack_Ugly(t *testing.T) {
@@ -181,10 +230,10 @@ func TestChecksum_Good(t *testing.T) {
 		Payload:      []byte("hello world"),
 		ChecksumAlgo: crypt.SHA256,
 	}
-	encoded, err := trix.Encode(trixOb, "CHCK")
+	encoded, err := trix.Encode(trixOb, "CHCK", nil)
 	assert.NoError(t, err)
 
-	decoded, err := trix.Decode(encoded, "CHCK")
+	decoded, err := trix.Decode(encoded, "CHCK", nil)
 	assert.NoError(t, err)
 	assert.Equal(t, trixOb.Payload, decoded.Payload)
 }
@@ -195,12 +244,12 @@ func TestChecksum_Bad(t *testing.T) {
 		Payload:      []byte("hello world"),
 		ChecksumAlgo: crypt.SHA256,
 	}
-	encoded, err := trix.Encode(trixOb, "CHCK")
+	encoded, err := trix.Encode(trixOb, "CHCK", nil)
 	assert.NoError(t, err)
 
 	encoded[len(encoded)-1] = 0 // Tamper with the payload
 
-	_, err = trix.Decode(encoded, "CHCK")
+	_, err = trix.Decode(encoded, "CHCK", nil)
 	assert.ErrorIs(t, err, trix.ErrChecksumMismatch)
 }
 
@@ -211,17 +260,17 @@ func TestChecksum_Ugly(t *testing.T) {
 			Payload:      []byte("hello world"),
 			ChecksumAlgo: crypt.SHA256,
 		}
-		encoded, err := trix.Encode(trixOb, "UGLY")
+		encoded, err := trix.Encode(trixOb, "UGLY", nil)
 		assert.NoError(t, err)
 
-		decoded, err := trix.Decode(encoded, "UGLY")
+		decoded, err := trix.Decode(encoded, "UGLY", nil)
 		assert.NoError(t, err)
 		delete(decoded.Header, "checksum_algo")
 
-		tamperedEncoded, err := trix.Encode(decoded, "UGLY")
+		tamperedEncoded, err := trix.Encode(decoded, "UGLY", nil)
 		assert.NoError(t, err)
 
-		_, err = trix.Decode(tamperedEncoded, "UGLY")
+		_, err = trix.Decode(tamperedEncoded, "UGLY", nil)
 		assert.Error(t, err)
 	})
 }
@@ -233,7 +282,7 @@ func FuzzDecode(f *testing.F) {
 		Header:  map[string]interface{}{"content_type": "text/plain"},
 		Payload: []byte("hello world"),
 	}
-	validEncoded, _ := trix.Encode(validTrix, "FUZZ")
+	validEncoded, _ := trix.Encode(validTrix, "FUZZ", nil)
 	f.Add(validEncoded)
 
 	var buf []byte
@@ -247,6 +296,61 @@ func FuzzDecode(f *testing.F) {
 	f.Add([]byte("short"))
 
 	f.Fuzz(func(t *testing.T, data []byte) {
-		_, _ = trix.Decode(data, "FUZZ")
+		_, _ = trix.Decode(data, "FUZZ", nil)
+	})
+}
+
+func TestEncode_WriteErrors(t *testing.T) {
+	trixOb := &trix.Trix{Header: map[string]interface{}{}, Payload: []byte("payload")}
+
+	for i := 1; i <= 5; i++ {
+		t.Run(fmt.Sprintf("fail on write call %d", i), func(t *testing.T) {
+			writer := &failWriter{failOnCall: i}
+			_, err := trix.Encode(trixOb, "TRIX", writer)
+			assert.Error(t, err)
+		})
+	}
+
+	// Test for successful return with external writer
+	t.Run("SuccessfulExternalWrite", func(t *testing.T) {
+		writer := &failWriter{}
+		_, err := trix.Encode(trixOb, "TRIX", writer)
+		assert.NoError(t, err)
+	})
+}
+
+func TestDecode_ReadErrors(t *testing.T) {
+	trixOb := &trix.Trix{Header: map[string]interface{}{}, Payload: []byte("payload")}
+	encoded, err := trix.Encode(trixOb, "TRIX", nil)
+	assert.NoError(t, err)
+
+	for i := 1; i <= 5; i++ {
+		t.Run(fmt.Sprintf("fail on read call %d", i), func(t *testing.T) {
+			reader := &failReader{failOnCall: i, reader: bytes.NewReader(encoded)}
+			_, err := trix.Decode(encoded, "TRIX", reader)
+			assert.Error(t, err)
+		})
+	}
+
+	t.Run("JSONUnmarshalError", func(t *testing.T) {
+		// Manually construct a byte slice with an invalid JSON header.
+		var buf []byte
+		buf = append(buf, []byte("TRIX")...)
+		buf = append(buf, byte(trix.Version))
+		buf = append(buf, []byte{0, 0, 0, 5}...)
+		buf = append(buf, []byte("{")...)
+		buf = append(buf, []byte("payload")...)
+
+		_, err := trix.Decode(buf, "TRIX", nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("ChecksumMissingAlgo", func(t *testing.T) {
+		trixOb := &trix.Trix{Header: map[string]interface{}{"checksum": "abc"}, Payload: []byte("payload")}
+		encoded, err := trix.Encode(trixOb, "TRIX", nil)
+		assert.NoError(t, err)
+
+		_, err = trix.Decode(encoded, "TRIX", nil)
+		assert.Error(t, err)
 	})
 }
