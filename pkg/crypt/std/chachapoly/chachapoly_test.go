@@ -1,10 +1,19 @@
 package chachapoly
 
 import (
+	"crypto/rand"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+// mockReader is a reader that returns an error.
+type mockReader struct{}
+
+func (r *mockReader) Read(p []byte) (n int, err error) {
+	return 0, errors.New("read error")
+}
 
 func TestEncryptDecrypt(t *testing.T) {
 	key := make([]byte, 32)
@@ -82,4 +91,24 @@ func TestCiphertextDiffersFromPlaintext(t *testing.T) {
 	ciphertext, err := Encrypt(plaintext, key)
 	assert.NoError(t, err)
 	assert.NotEqual(t, plaintext, ciphertext)
+}
+
+func TestEncryptNonceError(t *testing.T) {
+	key := make([]byte, 32)
+	plaintext := []byte("test")
+
+	// Replace the rand.Reader with our mock reader
+	oldReader := rand.Reader
+	rand.Reader = &mockReader{}
+	defer func() { rand.Reader = oldReader }()
+
+	_, err := Encrypt(plaintext, key)
+	assert.Error(t, err)
+}
+
+func TestDecryptInvalidKeySize(t *testing.T) {
+	key := make([]byte, 16) // Wrong size
+	ciphertext := []byte("test")
+	_, err := Decrypt(ciphertext, key)
+	assert.Error(t, err)
 }
