@@ -30,8 +30,8 @@ var (
 type Trix struct {
 	Header       map[string]interface{}
 	Payload      []byte
-	InSigils     []string `json:"-"` // Ignore Sigils during JSON marshaling
-	OutSigils    []string `json:"-"` // Ignore Sigils during JSON marshaling
+	InSigils     []string       `json:"-"` // Ignore Sigils during JSON marshaling
+	OutSigils    []string       `json:"-"` // Ignore Sigils during JSON marshaling
 	ChecksumAlgo crypt.HashType `json:"-"`
 }
 

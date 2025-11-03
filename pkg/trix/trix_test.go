@@ -117,10 +117,10 @@ func TestTrixEncodeDecode_Ugly(t *testing.T) {
 	t.Run("CorruptedHeaderLength", func(t *testing.T) {
 		// Manually construct a byte slice where the header length is larger than the actual data.
 		var buf []byte
-		buf = append(buf, []byte(magicNumber)...)     // Magic Number
-		buf = append(buf, byte(trix.Version))         // Version
-		buf = append(buf, []byte{0, 0, 3, 232}...)    // BigEndian representation of 1000
-		buf = append(buf, []byte("{}")...)           // A minimal valid JSON header
+		buf = append(buf, []byte(magicNumber)...)  // Magic Number
+		buf = append(buf, byte(trix.Version))      // Version
+		buf = append(buf, []byte{0, 0, 3, 232}...) // BigEndian representation of 1000
+		buf = append(buf, []byte("{}")...)         // A minimal valid JSON header
 		buf = append(buf, []byte("payload")...)
 
 		_, err := trix.Decode(buf, magicNumber, nil)
