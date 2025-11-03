@@ -3,6 +3,7 @@ module github.com/Snider/Enchantrix
 go 1.25
 
 require (
+	github.com/leaanthony/clir v1.7.0
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/crypto v0.43.0
 )
