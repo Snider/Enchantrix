@@ -4,6 +4,7 @@ tasks:
   test:
     desc: "Run all tests and generate a coverage report"
     cmds:
+      - go vet ./...
       - go test -v -coverprofile=coverage.out ./...
 
   build:
