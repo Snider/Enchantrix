@@ -23,8 +23,14 @@ jobs:
     - name: Build
       run: go build -v ./...
 
-    - name: Test
-      run: go test -v -coverprofile=coverage.out ./...
+    - name: Vet
+      run: go vet ./...
+
+    - name: Test (race + coverage)
+      run: go test -race -coverprofile=coverage.out -covermode=atomic ./...
+
+    - name: Fuzz (10s)
+      run: go test -run=NONE -fuzz=Fuzz -fuzztime=10s ./...
 
     - name: Upload coverage reports to Codecov
       uses: codecov/codecov-action@v5
