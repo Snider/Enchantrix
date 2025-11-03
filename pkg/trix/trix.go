@@ -182,9 +182,6 @@ func (t *Trix) Pack() error {
 		if err != nil {
 			return err
 		}
-		if sigil == nil {
-			return ErrNilSigil
-		}
 		t.Payload, err = sigil.In(t.Payload)
 		if err != nil {
 			return err
@@ -204,9 +201,6 @@ func (t *Trix) Unpack() error {
 		sigil, err := enchantrix.NewSigil(sigilName)
 		if err != nil {
 			return err
-		}
-		if sigil == nil {
-			return ErrNilSigil
 		}
 		t.Payload, err = sigil.Out(t.Payload)
 		if err != nil {

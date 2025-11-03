@@ -128,6 +128,18 @@ func TestTrixEncodeDecode_Ugly(t *testing.T) {
 		assert.Equal(t, err, io.ErrUnexpectedEOF)
 	})
 
+	t.Run("InvalidVersion", func(t *testing.T) {
+		var buf []byte
+		buf = append(buf, []byte(magicNumber)...)
+		buf = append(buf, byte(99)) // Invalid version
+		buf = append(buf, []byte{0, 0, 0, 2}...)
+		buf = append(buf, []byte("{}")...)
+		buf = append(buf, []byte("payload")...)
+
+		_, err := trix.Decode(buf, magicNumber, nil)
+		assert.ErrorIs(t, err, trix.ErrInvalidVersion)
+	})
+
 	t.Run("DataTooShort", func(t *testing.T) {
 		data := []byte("BAD")
 		_, err := trix.Decode(data, magicNumber, nil)
@@ -189,6 +201,11 @@ func TestPackUnpack_Bad(t *testing.T) {
 	trixOb.InSigils = []string{"hex"}
 	trixOb.Payload = []byte("not hex")
 	err = trixOb.Unpack()
+	assert.Error(t, err)
+
+	trixOb.InSigils = []string{"json"}
+	trixOb.Payload = []byte("not json")
+	err = trixOb.Pack()
 	assert.Error(t, err)
 }
 
