@@ -78,7 +78,7 @@ func demoTrix() {
 
 	// 6. Encode the .trix container into its binary format
 	magicNumber := "MyT1"
-	encodedTrix, err := trix.Encode(trixContainer, magicNumber)
+	encodedTrix, err := trix.Encode(trixContainer, magicNumber, nil)
 	if err != nil {
 		log.Fatalf("Failed to encode .trix container: %v", err)
 	}
@@ -88,7 +88,7 @@ func demoTrix() {
 	fmt.Println("--- DECODING ---")
 
 	// 7. Decode the .trix container
-	decodedTrix, err := trix.Decode(encodedTrix, magicNumber)
+	decodedTrix, err := trix.Decode(encodedTrix, magicNumber, nil)
 	if err != nil {
 		log.Fatalf("Failed to decode .trix container: %v", err)
 	}

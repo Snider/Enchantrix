@@ -20,6 +20,10 @@ func (m *mockReader) Read(p []byte) (n int, err error) {
 	if m.readErr != nil {
 		return 0, m.readErr
 	}
+	// Simulate a successful read by filling the buffer with zeros.
+	for i := range p {
+		p[i] = 0
+	}
 	return len(p), nil
 }
 
