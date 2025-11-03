@@ -39,6 +39,16 @@ const (
 
 // --- Hashing ---
 
+// IsHashAlgo checks if a string is a valid hash algorithm.
+func (s *Service) IsHashAlgo(algo string) bool {
+	switch HashType(algo) {
+	case LTHN, SHA512, SHA256, SHA1, MD5:
+		return true
+	default:
+		return false
+	}
+}
+
 // Hash computes a hash of the payload using the specified algorithm.
 func (s *Service) Hash(lib HashType, payload string) string {
 	switch lib {
