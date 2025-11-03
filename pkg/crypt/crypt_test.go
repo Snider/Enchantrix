@@ -31,11 +31,11 @@ func TestHash_Bad(t *testing.T) {
 func TestHash_Ugly(t *testing.T) {
 	// Test with potentially problematic inputs
 	testCases := []string{
-		"",                      // Empty string
-		" ",                     // Whitespace
-		"\x00\x01\x02\x03\x04",  // Null bytes
+		"",                             // Empty string
+		" ",                            // Whitespace
+		"\x00\x01\x02\x03\x04",         // Null bytes
 		strings.Repeat("a", 1024*1024), // Large payload (1MB)
-		"こんにちは",              // Unicode characters
+		"こんにちは",                        // Unicode characters
 	}
 
 	for _, tc := range testCases {
@@ -104,7 +104,6 @@ func TestFletcher64_Ugly(t *testing.T) {
 	assert.NotEqual(t, uint64(0), service.Fletcher64("ab"), "Checksum of length 2 string")
 	assert.NotEqual(t, uint64(0), service.Fletcher64("abc"), "Checksum of length 3 string")
 }
-
 
 // --- RSA Tests ---
 
