@@ -8,7 +8,34 @@ import (
 	"github.com/Snider/Enchantrix/pkg/crypt"
 	"github.com/Snider/Enchantrix/pkg/enchantrix"
 	"github.com/Snider/Enchantrix/pkg/trix"
-	"github.com/leaanthony/clir"
+	"github.com/spf13/cobra"
+)
+
+var (
+	rootCmd = &cobra.Command{
+		Use:   "trix",
+		Short: "A tool for encoding and decoding .trix files",
+		Long:  `trix is a command-line tool for working with the .trix file format, which is used for storing encrypted data.`,
+	}
+
+	encodeCmd = &cobra.Command{
+		Use:   "encode",
+		Short: "Encode a file to the .trix format",
+		RunE:  runEncode,
+	}
+
+	decodeCmd = &cobra.Command{
+		Use:   "decode",
+		Short: "Decode a .trix file",
+		RunE:  runDecode,
+	}
+
+	hashCmd = &cobra.Command{
+		Use:   "hash [algorithm]",
+		Short: "Hash a file using a specified algorithm",
+		Args:  cobra.ExactArgs(1),
+		RunE:  runHash,
+	}
 )
 
 var availableSigils = []string{
@@ -18,131 +45,138 @@ var availableSigils = []string{
 	"blake2s-256", "blake2b-256", "blake2b-384", "blake2b-512",
 }
 
-func main() {
-	app := clir.NewCli("trix", "A tool for encoding and decoding .trix files", "v0.0.1")
+var exit = os.Exit
 
-	// Encode command
-	encodeCmd := app.NewSubCommand("encode", "Encode a file to the .trix format")
-	var encodeInput, encodeOutput, encodeMagic string
-	encodeCmd.StringFlag("input", "Input file (or stdin)", &encodeInput)
-	encodeCmd.StringFlag("output", "Output file", &encodeOutput)
-	encodeCmd.StringFlag("magic", "Magic number (4 bytes)", &encodeMagic)
-	encodeCmd.Action(func() error {
-		sigils := encodeCmd.OtherArgs()
-		return handleEncode(encodeInput, encodeOutput, encodeMagic, sigils)
-	})
+func init() {
+	// Add flags to encode command
+	encodeCmd.Flags().StringP("input", "i", "", "Input file (or stdin)")
+	encodeCmd.Flags().StringP("output", "o", "", "Output file")
+	encodeCmd.Flags().StringP("magic", "m", "", "Magic number (4 bytes)")
 
-	// Decode command
-	decodeCmd := app.NewSubCommand("decode", "Decode a .trix file")
-	var decodeInput, decodeOutput, decodeMagic string
-	decodeCmd.StringFlag("input", "Input file (or stdin)", &decodeInput)
-	decodeCmd.StringFlag("output", "Output file", &decodeOutput)
-	decodeCmd.StringFlag("magic", "Magic number (4 bytes)", &decodeMagic)
-	decodeCmd.Action(func() error {
-		sigils := decodeCmd.OtherArgs()
-		return handleDecode(decodeInput, decodeOutput, decodeMagic, sigils)
-	})
+	// Add flags to decode command
+	decodeCmd.Flags().StringP("input", "i", "", "Input file (or stdin)")
+	decodeCmd.Flags().StringP("output", "o", "", "Output file")
+	decodeCmd.Flags().StringP("magic", "m", "", "Magic number (4 bytes)")
 
-	// Hash command
-	hashCmd := app.NewSubCommand("hash", "Hash a file using a specified algorithm")
-	var hashInput string
-	var hashAlgo string
-	hashCmd.StringFlag("input", "Input file (or stdin)", &hashInput)
-	hashCmd.Action(func() error {
-		algo := hashCmd.OtherArgs()
-		if len(algo) > 0 {
-			hashAlgo = algo[0]
+	// Add flags to hash command
+	hashCmd.Flags().StringP("input", "i", "", "Input file (or stdin)")
+
+	rootCmd.AddCommand(encodeCmd, decodeCmd, hashCmd)
+
+	// Add sigil commands
+	for _, sigilName := range availableSigils {
+		sigilCmd := &cobra.Command{
+			Use:   sigilName,
+			Short: "Apply the " + sigilName + " sigil",
+			RunE:  createSigilRunE(sigilName),
 		}
-		return handleHash(hashInput, hashAlgo)
-	})
-
-	// Sigil commands
-	for _, sigil := range availableSigils {
-		sigil := sigil // capture range variable
-		sigilCmd := app.NewSubCommand(sigil, "Apply the "+sigil+" sigil")
-		var input string
-		sigilCmd.StringFlag("input", "Input file or string (or stdin)", &input)
-		sigilCmd.Action(func() error {
-			return handleSigil(sigil, input)
-		})
-	}
-
-	if err := app.Run(); err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		sigilCmd.Flags().StringP("input", "i", "-", "Input file or string (or stdin)")
+		rootCmd.AddCommand(sigilCmd)
 	}
 }
 
-func readInput(inputFile string) ([]byte, error) {
-	if inputFile == "" {
-		return ioutil.ReadAll(os.Stdin)
+func createSigilRunE(sigilName string) func(cmd *cobra.Command, args []string) error {
+	return func(cmd *cobra.Command, args []string) error {
+		input, _ := cmd.Flags().GetString("input")
+		return handleSigil(cmd, sigilName, input)
 	}
-	return ioutil.ReadFile(inputFile)
 }
 
-func handleSigil(sigilName, input string) error {
+func main() {
+	if err := rootCmd.Execute(); err != nil {
+		exit(1)
+	}
+}
+
+func runEncode(cmd *cobra.Command, args []string) error {
+	input, _ := cmd.Flags().GetString("input")
+	output, _ := cmd.Flags().GetString("output")
+	magic, _ := cmd.Flags().GetString("magic")
+	return handleEncode(cmd, input, output, magic, args)
+}
+
+func runDecode(cmd *cobra.Command, args []string) error {
+	input, _ := cmd.Flags().GetString("input")
+	output, _ := cmd.Flags().GetString("output")
+	magic, _ := cmd.Flags().GetString("magic")
+	return handleDecode(cmd, input, output, magic, args)
+}
+
+func runHash(cmd *cobra.Command, args []string) error {
+	input, _ := cmd.Flags().GetString("input")
+	return handleHash(cmd, input, args[0])
+}
+
+func handleSigil(cmd *cobra.Command, sigilName, input string) error {
 	s, err := enchantrix.NewSigil(sigilName)
 	if err != nil {
 		return err
 	}
+
 	var data []byte
-	// check if input is a file or a string
-	if _, err := os.Stat(input); err == nil {
-		data, err = readInput(input)
-		if err != nil {
-			return err
-		}
+	if input == "-" {
+		data, err = ioutil.ReadAll(cmd.InOrStdin())
+	} else if _, err := os.Stat(input); err == nil {
+		data, err = ioutil.ReadFile(input)
 	} else {
-		if input == "" {
-			data, err = readInput("")
-			if err != nil {
-				return err
-			}
-		} else {
-			data = []byte(input)
-		}
+		data = []byte(input)
+	}
+
+	if err != nil {
+		return err
 	}
 
 	out, err := s.In(data)
 	if err != nil {
 		return err
 	}
-	fmt.Print(string(out))
+	cmd.OutOrStdout().Write(out)
 	return nil
 }
 
-func handleHash(inputFile, algo string) error {
+func handleHash(cmd *cobra.Command, inputFile, algo string) error {
 	if algo == "" {
 		return fmt.Errorf("hash algorithm is required")
 	}
+	service := crypt.NewService()
+	if !service.IsHashAlgo(algo) {
+		return fmt.Errorf("invalid hash algorithm: %s", algo)
+	}
 
-	data, err := readInput(inputFile)
+	var data []byte
+	var err error
+	if inputFile == "" || inputFile == "-" {
+		data, err = ioutil.ReadAll(cmd.InOrStdin())
+	} else {
+		data, err = ioutil.ReadFile(inputFile)
+	}
 	if err != nil {
 		return err
 	}
 
-	service := crypt.NewService()
 	hash := service.Hash(crypt.HashType(algo), string(data))
-	fmt.Println(hash)
+	cmd.OutOrStdout().Write([]byte(hash))
 	return nil
 }
 
-func handleEncode(inputFile, outputFile, magicNumber string, sigils []string) error {
-	if outputFile == "" {
-		return fmt.Errorf("output file is required")
-	}
+func handleEncode(cmd *cobra.Command, inputFile, outputFile, magicNumber string, sigils []string) error {
 	if len(magicNumber) != 4 {
 		return fmt.Errorf("magic number must be 4 bytes long")
 	}
-
-	payload, err := readInput(inputFile)
+	var data []byte
+	var err error
+	if inputFile == "" || inputFile == "-" {
+		data, err = ioutil.ReadAll(cmd.InOrStdin())
+	} else {
+		data, err = ioutil.ReadFile(inputFile)
+	}
 	if err != nil {
 		return err
 	}
 
 	t := &trix.Trix{
 		Header:   make(map[string]interface{}),
-		Payload:  payload,
+		Payload:  data,
 		InSigils: sigils,
 	}
 
@@ -155,31 +189,39 @@ func handleEncode(inputFile, outputFile, magicNumber string, sigils []string) er
 		return err
 	}
 
+	if outputFile == "" || outputFile == "-" {
+		_, err = cmd.OutOrStdout().Write(encoded)
+		return err
+	}
 	return ioutil.WriteFile(outputFile, encoded, 0644)
 }
 
-func handleDecode(inputFile, outputFile, magicNumber string, sigils []string) error {
-	if outputFile == "" {
-		return fmt.Errorf("output file is required")
-	}
+func handleDecode(cmd *cobra.Command, inputFile, outputFile, magicNumber string, sigils []string) error {
 	if len(magicNumber) != 4 {
 		return fmt.Errorf("magic number must be 4 bytes long")
 	}
-
-	data, err := readInput(inputFile)
+	var data []byte
+	var err error
+	if inputFile == "" || inputFile == "-" {
+		data, err = ioutil.ReadAll(cmd.InOrStdin())
+	} else {
+		data, err = ioutil.ReadFile(inputFile)
+	}
 	if err != nil {
 		return err
 	}
-
 	t, err := trix.Decode(data, magicNumber, nil)
 	if err != nil {
 		return err
 	}
-
 	t.OutSigils = sigils
 	if err := t.Unpack(); err != nil {
 		return err
 	}
 
+	if outputFile == "" || outputFile == "-" {
+		_, err = cmd.OutOrStdout().Write(t.Payload)
+		return err
+	}
 	return ioutil.WriteFile(outputFile, t.Payload, 0644)
 }
