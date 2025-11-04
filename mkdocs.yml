@@ -1,0 +1,22 @@
+site_name: Enchantrix
+site_description: Go encryption library and Trix file format
+site_url: https://github.com/Snider/Enchantrix
+repo_url: https://github.com/Snider/Enchantrix
+repo_name: Snider/Enchantrix
+docs_dir: docs
+theme:
+  name: material
+nav:
+  - Home: index.md
+  - Trix File Format: trix_format.md
+  - Examples:
+      - Trix & Sigil Chaining: trix_and_sigils.md
+      - Hashing: hashing.md
+      - Checksums: checksums.md
+      - RSA: rsa.md
+      - Standalone Sigils: standalone_sigils.md
+markdown_extensions:
+  - admonition
+  - codehilite
+  - toc:
+      permalink: true

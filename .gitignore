@@ -7,3 +7,8 @@ coverage.txt
 coverage.html
 coverage.out
 test.*
+# Build artifacts
+/dist/
+/site/
+# macOS
+.DS_Store

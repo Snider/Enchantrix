@@ -4,6 +4,28 @@
 
 Enchantrix is a Go-based encryption library for the Core framework, designed to provide a secure and easy-to-use framework for handling sensitive data in Web3 applications. It will feature Poly-ChaCha stream proxying and a custom `.trix` file format for encrypted data.
 
+## Documentation
+
+A MkDocs site (Material theme) lives in this repository. To preview it locally:
+
+```shell
+# Requires Python mkdocs and mkdocs-material
+pip install mkdocs mkdocs-material
+
+# Serve docs
+mkdocs serve -a 127.0.0.1:8000
+
+# Build static site to ./site/
+mkdocs build --strict
+```
+
+The site configuration is at `./mkdocs.yml` and sources are under `./docs/docs/`.
+
+## Go Version and Workspace
+
+- Minimum Go version: 1.25
+- This repository includes a `go.work` to streamline development across tools. Use standard Go commands; no special steps are required.
+
 ## Test-Driven Development
 
 This project follows a strict Test-Driven Development (TDD) methodology. All new functionality must be accompanied by a comprehensive suite of tests.
@@ -98,3 +120,21 @@ Example:
 ```shell
 echo "Hello, Trix!" | trix hex
 ```
+
+## Releases
+
+This repository includes a basic GoReleaser configuration at `.goreleaser.yml`.
+
+- Snapshot release (local, no publish):
+
+```shell
+goreleaser release --snapshot --clean
+```
+
+- Regular release (expects CI and Git tag):
+
+```shell
+goreleaser release --clean
+```
+
+Artifacts are produced under `./dist/`.

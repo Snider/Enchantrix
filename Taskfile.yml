@@ -10,3 +10,33 @@ tasks:
     desc: "Build the project"
     cmds:
       - go build -v ./...
+
+  fmt:
+    desc: "Format the code"
+    cmds:
+      - go fmt ./...
+
+  vet:
+    desc: "Run go vet"
+    cmds:
+      - go vet ./...
+
+  docs:serve:
+    desc: "Serve the MkDocs site locally"
+    cmds:
+      - mkdocs serve -a 127.0.0.1:8000
+
+  docs:build:
+    desc: "Build the MkDocs site"
+    cmds:
+      - mkdocs build --strict
+
+  release:snapshot:
+    desc: "Create a snapshot release with GoReleaser (no publishing)"
+    cmds:
+      - goreleaser release --snapshot --clean
+
+  release:
+    desc: "Create a release with GoReleaser"
+    cmds:
+      - goreleaser release --clean
