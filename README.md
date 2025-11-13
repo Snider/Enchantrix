@@ -2,7 +2,7 @@
 
 [![codecov](https://codecov.io/github/Snider/Enchantrix/branch/main/graph/badge.svg?token=2E1QWEDFUW)](https://codecov.io/github/Snider/Enchantrix)
 
-Enchantrix is a Go-based encryption library for the Core framework, designed to provide a secure and easy-to-use framework for handling sensitive data in Web3 applications. It will feature Poly-ChaCha stream proxying and a custom `.trix` file format for encrypted data.
+Enchantrix is a Go-based encryption library designed to provide a secure and easy-to-use framework for handling sensitive data in Web3 applications. It will feature Poly-ChaCha stream proxying and a custom `.trix` file format for encrypted data.
 
 ## Documentation
 
