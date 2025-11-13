@@ -28,7 +28,7 @@ func (m *failOnSecondWrite) Write(p []byte) (n int, err error) {
 	return len(p), nil
 }
 
-func TestReverseSigil(t *testing.T) {
+func TestReverseSigil_Good(t *testing.T) {
 	s := &ReverseSigil{}
 	data := []byte("hello")
 	reversed, err := s.In(data)
@@ -37,15 +37,23 @@ func TestReverseSigil(t *testing.T) {
 	original, err := s.Out(reversed)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", string(original))
+}
 
-	// Ugly - empty string
+func TestReverseSigil_Ugly(t *testing.T) {
+	s := &ReverseSigil{}
+	// Test with empty string
 	empty := []byte("")
 	reversedEmpty, err := s.In(empty)
 	assert.NoError(t, err)
 	assert.Equal(t, "", string(reversedEmpty))
+
+	// Test with nil
+	reversedNil, err := s.In(nil)
+	assert.NoError(t, err)
+	assert.Nil(t, reversedNil)
 }
 
-func TestHexSigil(t *testing.T) {
+func TestHexSigil_Good(t *testing.T) {
 	s := &HexSigil{}
 	data := []byte("hello")
 	encoded, err := s.In(data)
@@ -54,13 +62,29 @@ func TestHexSigil(t *testing.T) {
 	decoded, err := s.Out(encoded)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", string(decoded))
+}
 
-	// Bad - invalid hex string
-	_, err = s.Out([]byte("not hex"))
+func TestHexSigil_Bad(t *testing.T) {
+	s := &HexSigil{}
+	_, err := s.Out([]byte("not hex"))
 	assert.Error(t, err)
 }
 
-func TestBase64Sigil(t *testing.T) {
+func TestHexSigil_Ugly(t *testing.T) {
+	s := &HexSigil{}
+	// Test with empty string
+	empty := []byte("")
+	encodedEmpty, err := s.In(empty)
+	assert.NoError(t, err)
+	assert.Equal(t, "", string(encodedEmpty))
+
+	// Test with nil
+	encodedNil, err := s.In(nil)
+	assert.NoError(t, err)
+	assert.Nil(t, encodedNil)
+}
+
+func TestBase64Sigil_Good(t *testing.T) {
 	s := &Base64Sigil{}
 	data := []byte("hello")
 	encoded, err := s.In(data)
@@ -69,13 +93,29 @@ func TestBase64Sigil(t *testing.T) {
 	decoded, err := s.Out(encoded)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", string(decoded))
+}
 
-	// Bad - invalid base64 string
-	_, err = s.Out([]byte("not base64"))
+func TestBase64Sigil_Bad(t *testing.T) {
+	s := &Base64Sigil{}
+	_, err := s.Out([]byte("not base64"))
 	assert.Error(t, err)
 }
 
-func TestGzipSigil(t *testing.T) {
+func TestBase64Sigil_Ugly(t *testing.T) {
+	s := &Base64Sigil{}
+	// Test with empty string
+	empty := []byte("")
+	encodedEmpty, err := s.In(empty)
+	assert.NoError(t, err)
+	assert.Equal(t, "", string(encodedEmpty))
+
+	// Test with nil
+	encodedNil, err := s.In(nil)
+	assert.NoError(t, err)
+	assert.Nil(t, encodedNil)
+}
+
+func TestGzipSigil_Good(t *testing.T) {
 	s := &GzipSigil{}
 	data := []byte("hello")
 	compressed, err := s.In(data)
@@ -84,9 +124,14 @@ func TestGzipSigil(t *testing.T) {
 	decompressed, err := s.Out(compressed)
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", string(decompressed))
+}
 
-	// Bad - invalid gzip data
-	_, err = s.Out([]byte("not gzip"))
+func TestGzipSigil_Bad(t *testing.T) {
+	s := &GzipSigil{}
+	data := []byte("hello")
+
+	// Test with invalid gzip data
+	_, err := s.Out([]byte("not gzip"))
 	assert.Error(t, err)
 
 	// Test writer error
@@ -100,25 +145,58 @@ func TestGzipSigil(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestJSONSigil(t *testing.T) {
+func TestGzipSigil_Ugly(t *testing.T) {
+	s := &GzipSigil{}
+	// Test with empty string
+	empty := []byte("")
+	compressedEmpty, err := s.In(empty)
+	assert.NoError(t, err)
+	decompressedEmpty, err := s.Out(compressedEmpty)
+	assert.NoError(t, err)
+	assert.Equal(t, "", string(decompressedEmpty))
+
+	// Test with nil
+	compressedNil, err := s.In(nil)
+	assert.NoError(t, err)
+	decompressedNil, err := s.Out(compressedNil)
+	assert.NoError(t, err)
+	assert.Nil(t, decompressedNil)
+}
+
+func TestJSONSigil_Good(t *testing.T) {
 	s := &JSONSigil{Indent: true}
 	data := []byte(`{"hello":"world"}`)
 	indented, err := s.In(data)
 	assert.NoError(t, err)
 	assert.Equal(t, "{\n  \"hello\": \"world\"\n}", string(indented))
+
 	s.Indent = false
 	compacted, err := s.In(indented)
 	assert.NoError(t, err)
 	assert.Equal(t, `{"hello":"world"}`, string(compacted))
 
-	// Bad - invalid json
-	_, err = s.In([]byte("not json"))
-	assert.Error(t, err)
-
-	// Out is a no-op, so it should return the data as-is
+	// Out is a no-op
 	outData, err := s.Out(data)
 	assert.NoError(t, err)
 	assert.Equal(t, data, outData)
+}
+
+func TestJSONSigil_Bad(t *testing.T) {
+	s := &JSONSigil{}
+	_, err := s.In([]byte("not json"))
+	assert.Error(t, err)
+}
+
+func TestJSONSigil_Ugly(t *testing.T) {
+	s := &JSONSigil{}
+	// Test with empty string
+	empty := []byte("")
+	_, err := s.In(empty)
+	assert.Error(t, err)
+
+	// Test with nil
+	_, err = s.In(nil)
+	assert.Error(t, err)
 }
 
 func TestHashSigils_Good(t *testing.T) {
@@ -171,4 +249,20 @@ func TestHashSigil_Bad(t *testing.T) {
 	_, err := s.In(data)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "hash algorithm not available")
+}
+
+func TestHashSigil_Ugly(t *testing.T) {
+	s, err := NewSigil("sha256")
+	assert.NoError(t, err)
+
+	// Test with empty string
+	empty := []byte("")
+	hashedEmpty, err := s.In(empty)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, hashedEmpty)
+
+	// Test with nil
+	hashedNil, err := s.In(nil)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, hashedNil)
 }

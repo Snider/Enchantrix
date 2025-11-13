@@ -155,6 +155,63 @@ func TestPGP_Good(t *testing.T) {
 	assert.NotNil(t, ciphertext)
 }
 
+func TestPGP_Bad(t *testing.T) {
+	// Generate two key pairs
+	pubKey1, privKey1, err := service.GeneratePGPKeyPair("test1", "test1@test.com", "")
+	assert.NoError(t, err)
+	pubKey2, privKey2, err := service.GeneratePGPKeyPair("test2", "test2@test.com", "")
+	assert.NoError(t, err)
+
+	message := []byte("secret message")
+
+	// Test decryption with the wrong key
+	ciphertext, err := service.EncryptPGP(pubKey1, message)
+	assert.NoError(t, err)
+	// This should fail because we are using the wrong private key.
+	_, err = service.DecryptPGP(privKey2, ciphertext) // Intentionally using wrong key
+	assert.Error(t, err)
+
+	// Test verification with the wrong key
+	signature, err := service.SignPGP(privKey1, message)
+	assert.NoError(t, err)
+	err = service.VerifyPGP(pubKey2, message, signature)
+	assert.Error(t, err)
+
+	// Test verification with a tampered message
+	tamperedMessage := []byte("tampered message")
+	err = service.VerifyPGP(pubKey1, tamperedMessage, signature)
+	assert.Error(t, err)
+}
+
+func TestPGP_Ugly(t *testing.T) {
+	// Test with malformed keys
+	_, err := service.EncryptPGP([]byte("not a real key"), []byte("message"))
+	assert.Error(t, err)
+
+	_, err = service.DecryptPGP([]byte("not a real key"), []byte("message"))
+	assert.Error(t, err)
+
+	_, err = service.SignPGP([]byte("not a real key"), []byte("message"))
+	assert.Error(t, err)
+
+	err = service.VerifyPGP([]byte("not a real key"), []byte("message"), []byte("not a real signature"))
+	assert.Error(t, err)
+
+	// Test with empty message
+	pubKey, privKey, err := service.GeneratePGPKeyPair("test", "test@test.com", "")
+	assert.NoError(t, err)
+	message := []byte("")
+	ciphertext, err := service.EncryptPGP(pubKey, message)
+	assert.NoError(t, err)
+	plaintext, err := service.DecryptPGP(privKey, ciphertext, )
+	assert.NoError(t, err)
+	assert.Equal(t, message, plaintext)
+
+	// Test symmetric encryption with empty passphrase
+	_, err = service.SymmetricallyEncryptPGP([]byte(""), message)
+	assert.Error(t, err)
+}
+
 // --- IsHashAlgo Tests ---
 
 func TestIsHashAlgo_Good(t *testing.T) {

@@ -26,6 +26,9 @@ type ReverseSigil struct{}
 
 // In reverses the bytes of the data.
 func (s *ReverseSigil) In(data []byte) ([]byte, error) {
+	if data == nil {
+		return nil, nil
+	}
 	reversed := make([]byte, len(data))
 	for i, j := 0, len(data)-1; i < len(data); i, j = i+1, j-1 {
 		reversed[i] = data[j]
@@ -43,6 +46,9 @@ type HexSigil struct{}
 
 // In encodes the data to hexadecimal.
 func (s *HexSigil) In(data []byte) ([]byte, error) {
+	if data == nil {
+		return nil, nil
+	}
 	dst := make([]byte, hex.EncodedLen(len(data)))
 	hex.Encode(dst, data)
 	return dst, nil
@@ -50,6 +56,9 @@ func (s *HexSigil) In(data []byte) ([]byte, error) {
 
 // Out decodes the data from hexadecimal.
 func (s *HexSigil) Out(data []byte) ([]byte, error) {
+	if data == nil {
+		return nil, nil
+	}
 	dst := make([]byte, hex.DecodedLen(len(data)))
 	_, err := hex.Decode(dst, data)
 	return dst, err
@@ -60,6 +69,9 @@ type Base64Sigil struct{}
 
 // In encodes the data to base64.
 func (s *Base64Sigil) In(data []byte) ([]byte, error) {
+	if data == nil {
+		return nil, nil
+	}
 	dst := make([]byte, base64.StdEncoding.EncodedLen(len(data)))
 	base64.StdEncoding.Encode(dst, data)
 	return dst, nil
@@ -67,6 +79,9 @@ func (s *Base64Sigil) In(data []byte) ([]byte, error) {
 
 // Out decodes the data from base64.
 func (s *Base64Sigil) Out(data []byte) ([]byte, error) {
+	if data == nil {
+		return nil, nil
+	}
 	dst := make([]byte, base64.StdEncoding.DecodedLen(len(data)))
 	n, err := base64.StdEncoding.Decode(dst, data)
 	return dst[:n], err
@@ -79,6 +94,9 @@ type GzipSigil struct {
 
 // In compresses the data using gzip.
 func (s *GzipSigil) In(data []byte) ([]byte, error) {
+	if data == nil {
+		return nil, nil
+	}
 	var b bytes.Buffer
 	w := s.writer
 	if w == nil {
@@ -96,6 +114,9 @@ func (s *GzipSigil) In(data []byte) ([]byte, error) {
 
 // Out decompresses the data using gzip.
 func (s *GzipSigil) Out(data []byte) ([]byte, error) {
+	if data == nil {
+		return nil, nil
+	}
 	r, err := gzip.NewReader(bytes.NewReader(data))
 	if err != nil {
 		return nil, err
