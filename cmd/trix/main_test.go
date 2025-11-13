@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"os"
 	"strings"
@@ -30,6 +31,27 @@ func TestMain_Good(t *testing.T) {
 
 	// Check that the output contains the help message
 	assert.Contains(t, buf.String(), "Usage:")
+}
+
+func TestMain_Bad(t *testing.T) {
+	oldExit := exit
+	defer func() { exit = oldExit }()
+	var exitCode int
+	exit = func(code int) {
+		exitCode = code
+	}
+	rootCmd.RunE = func(cmd *cobra.Command, args []string) error {
+		return errors.New("test error")
+	}
+	// The rootCmd needs to be reset so that the test can be run again
+	defer func() { rootCmd = &cobra.Command{
+		Use:   "trix",
+		Short: "A tool for encoding and decoding .trix files",
+		Long:  `trix is a command-line tool for working with the .trix file format, which is used for storing encrypted data.`,
+	}
+	}()
+	main()
+	assert.Equal(t, 1, exitCode)
 }
 
 func TestHandleSigil_Good(t *testing.T) {

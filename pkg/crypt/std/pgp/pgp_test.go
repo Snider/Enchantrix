@@ -64,6 +64,9 @@ func TestService_Decrypt_Bad(t *testing.T) {
 	require.NoError(t, err)
 	_, err = s.Decrypt(priv2, encrypted)
 	assert.Error(t, err)
+
+	_, err = s.Decrypt(priv2, []byte("bad encrypted data"))
+	assert.Error(t, err)
 }
 
 func TestService_Sign_Good(t *testing.T) {
