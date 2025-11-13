@@ -11,18 +11,21 @@ import (
 	"strings"
 
 	"github.com/Snider/Enchantrix/pkg/crypt/std/lthn"
+	"github.com/Snider/Enchantrix/pkg/crypt/std/pgp"
 	"github.com/Snider/Enchantrix/pkg/crypt/std/rsa"
 )
 
 // Service is the main struct for the crypt service.
 type Service struct {
 	rsa *rsa.Service
+	pgp *pgp.Service
 }
 
-// NewService creates a new crypt Service and initialises its embedded RSA service.
+// NewService creates a new crypt Service and initialises its embedded services.
 func NewService() *Service {
 	return &Service{
 		rsa: rsa.NewService(),
+		pgp: pgp.NewService(),
 	}
 }
 
@@ -170,4 +173,31 @@ func (s *Service) EncryptRSA(publicKey, data, label []byte) ([]byte, error) {
 func (s *Service) DecryptRSA(privateKey, ciphertext, label []byte) ([]byte, error) {
 	s.ensureRSA()
 	return s.rsa.Decrypt(privateKey, ciphertext, label)
+}
+
+// --- PGP ---
+
+// ensurePGP initializes the PGP service if it is not already.
+func (s *Service) ensurePGP() {
+	if s.pgp == nil {
+		s.pgp = pgp.NewService()
+	}
+}
+
+// GeneratePGPKeyPair creates a new PGP key pair.
+func (s *Service) GeneratePGPKeyPair(name, email, comment string) (publicKey, privateKey []byte, err error) {
+	s.ensurePGP()
+	return s.pgp.GenerateKeyPair(name, email, comment)
+}
+
+// EncryptPGP encrypts data with a public key.
+func (s *Service) EncryptPGP(publicKey, data []byte) ([]byte, error) {
+	s.ensurePGP()
+	return s.pgp.Encrypt(publicKey, data)
+}
+
+// DecryptPGP decrypts data with a private key.
+func (s *Service) DecryptPGP(privateKey, ciphertext []byte) ([]byte, error) {
+	s.ensurePGP()
+	return s.pgp.Decrypt(privateKey, ciphertext)
 }
