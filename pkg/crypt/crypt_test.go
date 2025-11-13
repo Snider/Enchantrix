@@ -147,6 +147,12 @@ func TestPGP_Good(t *testing.T) {
 	assert.NoError(t, err)
 	err = service.VerifyPGP(pubKey, message, signature)
 	assert.NoError(t, err)
+
+	// Test symmetric encryption
+	passphrase := []byte("my-secret-passphrase")
+	ciphertext, err = service.SymmetricallyEncryptPGP(passphrase, message)
+	assert.NoError(t, err)
+	assert.NotNil(t, ciphertext)
 }
 
 // --- IsHashAlgo Tests ---

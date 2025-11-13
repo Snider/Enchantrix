@@ -46,13 +46,16 @@ func TestHandleSigil_Good(t *testing.T) {
 	assert.Equal(t, "aGVsbG8=", strings.TrimSpace(buf.String()))
 }
 
-func TestHandleEncodeAndDecode_Good(t *testing.T) {
+func TestRunEncodeAndDecode_Good(t *testing.T) {
 	// Encode
 	encodeCmd := &cobra.Command{}
 	encodeBuf := new(bytes.Buffer)
 	encodeCmd.SetOut(encodeBuf)
 	encodeCmd.SetIn(strings.NewReader("hello"))
-	err := handleEncode(encodeCmd, "-", "-", "TEST", []string{"base64"})
+	encodeCmd.Flags().StringP("input", "i", "-", "Input file or string (or stdin)")
+	encodeCmd.Flags().StringP("output", "o", "-", "Output file")
+	encodeCmd.Flags().StringP("magic", "m", "TEST", "Magic number (4 bytes)")
+	err := runEncode(encodeCmd, []string{"base64"})
 	assert.NoError(t, err)
 	assert.NotEmpty(t, encodeBuf.String())
 
@@ -61,19 +64,23 @@ func TestHandleEncodeAndDecode_Good(t *testing.T) {
 	decodeBuf := new(bytes.Buffer)
 	decodeCmd.SetOut(decodeBuf)
 	decodeCmd.SetIn(encodeBuf) // Use the output of the encode as the input for the decode
-	err = handleDecode(decodeCmd, "-", "-", "TEST", []string{"base64"})
+	decodeCmd.Flags().StringP("input", "i", "-", "Input file or string (or stdin)")
+	decodeCmd.Flags().StringP("output", "o", "-", "Output file")
+	decodeCmd.Flags().StringP("magic", "m", "TEST", "Magic number (4 bytes)")
+	err = runDecode(decodeCmd, []string{"base64"})
 	assert.NoError(t, err)
 	assert.Equal(t, "hello", strings.TrimSpace(decodeBuf.String()))
 }
 
-func TestHandleHash_Good(t *testing.T) {
+func TestRunHash_Good(t *testing.T) {
 	cmd := &cobra.Command{}
 	buf := new(bytes.Buffer)
 	cmd.SetOut(buf)
 	cmd.SetIn(strings.NewReader("hello"))
+	cmd.Flags().StringP("input", "i", "-", "Input file or string (or stdin)")
 
-	// Run the handleHash function
-	err := handleHash(cmd, "-", "sha256")
+	// Run the runHash function
+	err := runHash(cmd, []string{"sha256"})
 	assert.NoError(t, err)
 
 	// Check that the output is not empty
