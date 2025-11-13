@@ -3,6 +3,7 @@ package crypt
 import (
 	"crypto/md5"
 	"crypto/sha1"
+	"errors"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/binary"
@@ -217,5 +218,8 @@ func (s *Service) VerifyPGP(publicKey, data, signature []byte) error {
 // SymmetricallyEncryptPGP encrypts data with a passphrase.
 func (s *Service) SymmetricallyEncryptPGP(passphrase, data []byte) ([]byte, error) {
 	s.ensurePGP()
+	if len(passphrase) == 0 {
+		return nil, errors.New("passphrase cannot be empty")
+	}
 	return s.pgp.SymmetricallyEncrypt(passphrase, data)
 }

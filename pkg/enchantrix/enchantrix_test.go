@@ -40,6 +40,21 @@ func TestTransmute_Bad(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestTransmute_Ugly(t *testing.T) {
+	// Test with nil data
+	_, err := enchantrix.Transmute(nil, []enchantrix.Sigil{&enchantrix.ReverseSigil{}})
+	assert.NoError(t, err)
+
+	// Test with nil sigils
+	_, err = enchantrix.Transmute([]byte("hello"), nil)
+	assert.NoError(t, err)
+
+	// Test with no sigils
+	result, err := enchantrix.Transmute([]byte("hello"), []enchantrix.Sigil{})
+	assert.NoError(t, err)
+	assert.Equal(t, "hello", string(result))
+}
+
 // --- Factory Tests ---
 
 func TestNewSigil_Good(t *testing.T) {
@@ -62,4 +77,21 @@ func TestNewSigil_Bad(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, sigil)
 	assert.Contains(t, err.Error(), "unknown sigil name")
+}
+
+func TestNewSigil_Ugly(t *testing.T) {
+	// Test with empty string
+	sigil, err := enchantrix.NewSigil("")
+	assert.Error(t, err)
+	assert.Nil(t, sigil)
+
+	// Test with whitespace
+	sigil, err = enchantrix.NewSigil("  ")
+	assert.Error(t, err)
+	assert.Nil(t, sigil)
+
+	// Test with non-printable characters
+	sigil, err = enchantrix.NewSigil("\x00\x01\x02")
+	assert.Error(t, err)
+	assert.Nil(t, sigil)
 }
