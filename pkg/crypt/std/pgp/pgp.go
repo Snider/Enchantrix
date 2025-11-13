@@ -107,3 +107,59 @@ func (s *Service) Decrypt(privateKey, ciphertext []byte) ([]byte, error) {
 
 	return plaintext, nil
 }
+
+// Sign creates a detached signature for a message.
+func (s *Service) Sign(privateKey, data []byte) ([]byte, error) {
+	privKeyReader := bytes.NewReader(privateKey)
+	keyring, err := openpgp.ReadArmoredKeyRing(privKeyReader)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read private key ring: %w", err)
+	}
+
+	signer := keyring[0]
+	if signer.PrivateKey == nil {
+		return nil, fmt.Errorf("private key not found in keyring")
+	}
+
+	buf := new(bytes.Buffer)
+	err = openpgp.ArmoredDetachSign(buf, signer, bytes.NewReader(data), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to sign message: %w", err)
+	}
+
+	return buf.Bytes(), nil
+}
+
+// Verify verifies a detached signature for a message.
+func (s *Service) Verify(publicKey, data, signature []byte) error {
+	pubKeyReader := bytes.NewReader(publicKey)
+	keyring, err := openpgp.ReadArmoredKeyRing(pubKeyReader)
+	if err != nil {
+		return fmt.Errorf("failed to read public key ring: %w", err)
+	}
+
+	_, err = openpgp.CheckArmoredDetachedSignature(keyring, bytes.NewReader(data), bytes.NewReader(signature), nil)
+	if err != nil {
+		return fmt.Errorf("failed to verify signature: %w", err)
+	}
+
+	return nil
+}
+
+// SymmetricallyEncrypt encrypts data with a passphrase.
+func (s *Service) SymmetricallyEncrypt(passphrase, data []byte) ([]byte, error) {
+	buf := new(bytes.Buffer)
+	w, err := openpgp.SymmetricallyEncrypt(buf, passphrase, nil, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create symmetric encryption writer: %w", err)
+	}
+	defer w.Close()
+
+	_, err = w.Write(data)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write data to symmetric encryption writer: %w", err)
+	}
+	w.Close()
+
+	return buf.Bytes(), nil
+}

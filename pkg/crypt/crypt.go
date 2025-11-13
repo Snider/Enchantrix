@@ -201,3 +201,21 @@ func (s *Service) DecryptPGP(privateKey, ciphertext []byte) ([]byte, error) {
 	s.ensurePGP()
 	return s.pgp.Decrypt(privateKey, ciphertext)
 }
+
+// SignPGP creates a detached signature for a message.
+func (s *Service) SignPGP(privateKey, data []byte) ([]byte, error) {
+	s.ensurePGP()
+	return s.pgp.Sign(privateKey, data)
+}
+
+// VerifyPGP verifies a detached signature for a message.
+func (s *Service) VerifyPGP(publicKey, data, signature []byte) error {
+	s.ensurePGP()
+	return s.pgp.Verify(publicKey, data, signature)
+}
+
+// SymmetricallyEncryptPGP encrypts data with a passphrase.
+func (s *Service) SymmetricallyEncryptPGP(passphrase, data []byte) ([]byte, error) {
+	s.ensurePGP()
+	return s.pgp.SymmetricallyEncrypt(passphrase, data)
+}
