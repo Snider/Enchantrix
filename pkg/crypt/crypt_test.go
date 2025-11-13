@@ -126,6 +126,49 @@ func TestRSA_Good(t *testing.T) {
 	assert.Equal(t, message, plaintext)
 }
 
+// --- PGP Tests ---
+
+func TestPGP_Good(t *testing.T) {
+	pubKey, privKey, err := service.GeneratePGPKeyPair("test", "test@test.com", "test comment")
+	assert.NoError(t, err)
+	assert.NotNil(t, pubKey)
+	assert.NotNil(t, privKey)
+
+	// Test encryption and decryption
+	message := []byte("secret message")
+	ciphertext, err := service.EncryptPGP(pubKey, message)
+	assert.NoError(t, err)
+	plaintext, err := service.DecryptPGP(privKey, ciphertext)
+	assert.NoError(t, err)
+	assert.Equal(t, message, plaintext)
+
+	// Test signing and verification
+	signature, err := service.SignPGP(privKey, message)
+	assert.NoError(t, err)
+	err = service.VerifyPGP(pubKey, message, signature)
+	assert.NoError(t, err)
+
+	// Test symmetric encryption
+	passphrase := []byte("my-secret-passphrase")
+	ciphertext, err = service.SymmetricallyEncryptPGP(passphrase, message)
+	assert.NoError(t, err)
+	assert.NotNil(t, ciphertext)
+}
+
+// --- IsHashAlgo Tests ---
+
+func TestIsHashAlgo_Good(t *testing.T) {
+	assert.True(t, service.IsHashAlgo("lthn"))
+	assert.True(t, service.IsHashAlgo("sha512"))
+	assert.True(t, service.IsHashAlgo("sha256"))
+	assert.True(t, service.IsHashAlgo("sha1"))
+	assert.True(t, service.IsHashAlgo("md5"))
+}
+
+func TestIsHashAlgo_Bad(t *testing.T) {
+	assert.False(t, service.IsHashAlgo("not-a-hash"))
+}
+
 func TestRSA_Bad(t *testing.T) {
 	// Test with a key size that is too small
 	_, _, err := service.GenerateRSAKeyPair(1024)
