@@ -1,6 +1,11 @@
 # Enchantrix
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/Snider/Enchantrix)](https://goreportcard.com/report/github.com/Snider/Enchantrix)
+[![GoDoc](https://godoc.org/github.com/Snider/Enchantrix?status.svg)](https://godoc.org/github.com/Snider/Enchantrix)
+[![Build Status](https://github.com/Snider/Enchantrix/actions/workflows/go.yml/badge.svg)](https://github.com/Snider/Enchantrix/actions/workflows/go.yml)
 [![codecov](https://codecov.io/github/Snider/Enchantrix/branch/main/graph/badge.svg?token=2E1QWEDFUW)](https://codecov.io/github/Snider/Enchantrix)
+[![Release](https://img.shields.io/github/release/Snider/Enchantrix.svg)](https://github.com/Snider/Enchantrix/releases/latest)
+[![License](https://img.shields.io/github/license/Snider/Enchantrix)](https://github.com/Snider/Enchantrix/blob/main/LICENCE)
 
 Enchantrix is a Go-based encryption library designed to provide a secure and easy-to-use framework for handling sensitive data in Web3 applications. It will feature Poly-ChaCha stream proxying and a custom `.trix` file format for encrypted data.
 
