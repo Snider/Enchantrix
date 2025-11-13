@@ -46,6 +46,12 @@ func TestHandleSigil_Good(t *testing.T) {
 	assert.Equal(t, "aGVsbG8=", strings.TrimSpace(buf.String()))
 }
 
+func TestHandleSigil_Bad(t *testing.T) {
+	cmd := &cobra.Command{}
+	err := handleSigil(cmd, "bad-sigil", "hello")
+	assert.Error(t, err)
+}
+
 func TestRunEncodeAndDecode_Good(t *testing.T) {
 	// Encode
 	encodeCmd := &cobra.Command{}
@@ -72,6 +78,20 @@ func TestRunEncodeAndDecode_Good(t *testing.T) {
 	assert.Equal(t, "hello", strings.TrimSpace(decodeBuf.String()))
 }
 
+func TestRunEncode_Bad(t *testing.T) {
+	cmd := &cobra.Command{}
+	cmd.Flags().StringP("magic", "m", "bad", "Magic number (4 bytes)")
+	err := runEncode(cmd, []string{})
+	assert.Error(t, err)
+}
+
+func TestRunDecode_Bad(t *testing.T) {
+	cmd := &cobra.Command{}
+	cmd.Flags().StringP("magic", "m", "bad", "Magic number (4 bytes)")
+	err := runDecode(cmd, []string{})
+	assert.Error(t, err)
+}
+
 func TestRunHash_Good(t *testing.T) {
 	cmd := &cobra.Command{}
 	buf := new(bytes.Buffer)
@@ -85,6 +105,12 @@ func TestRunHash_Good(t *testing.T) {
 
 	// Check that the output is not empty
 	assert.NotEmpty(t, buf.String())
+}
+
+func TestRunHash_Bad(t *testing.T) {
+	cmd := &cobra.Command{}
+	err := runHash(cmd, []string{"bad-hash"})
+	assert.Error(t, err)
 }
 
 func TestCreateSigilRunE_Good(t *testing.T) {
