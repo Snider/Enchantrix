@@ -1,8 +1,11 @@
 package enchantrix
 
 // Sigil defines the interface for a data transformer.
+// A Sigil is a reversible or irreversible transformation of a byte slice.
 type Sigil interface {
+	// In transforms the data.
 	In(data []byte) ([]byte, error)
+	// Out reverses the transformation.
 	Out(data []byte) ([]byte, error)
 }
 
