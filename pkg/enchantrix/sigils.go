@@ -22,6 +22,7 @@ import (
 )
 
 // ReverseSigil is a Sigil that reverses the bytes of the payload.
+// It is a symmetrical Sigil, meaning that the In and Out methods perform the same operation.
 type ReverseSigil struct{}
 
 // In reverses the bytes of the data.
@@ -42,6 +43,7 @@ func (s *ReverseSigil) Out(data []byte) ([]byte, error) {
 }
 
 // HexSigil is a Sigil that encodes/decodes data to/from hexadecimal.
+// The In method encodes the data, and the Out method decodes it.
 type HexSigil struct{}
 
 // In encodes the data to hexadecimal.
@@ -65,6 +67,7 @@ func (s *HexSigil) Out(data []byte) ([]byte, error) {
 }
 
 // Base64Sigil is a Sigil that encodes/decodes data to/from base64.
+// The In method encodes the data, and the Out method decodes it.
 type Base64Sigil struct{}
 
 // In encodes the data to base64.
@@ -88,6 +91,7 @@ func (s *Base64Sigil) Out(data []byte) ([]byte, error) {
 }
 
 // GzipSigil is a Sigil that compresses/decompresses data using gzip.
+// The In method compresses the data, and the Out method decompresses it.
 type GzipSigil struct {
 	writer io.Writer
 }
@@ -126,6 +130,7 @@ func (s *GzipSigil) Out(data []byte) ([]byte, error) {
 }
 
 // JSONSigil is a Sigil that compacts or indents JSON data.
+// The Out method is a no-op.
 type JSONSigil struct{ Indent bool }
 
 // In compacts or indents the JSON data.
@@ -147,6 +152,7 @@ func (s *JSONSigil) Out(data []byte) ([]byte, error) {
 }
 
 // HashSigil is a Sigil that hashes the data using a specified algorithm.
+// The In method hashes the data, and the Out method is a no-op.
 type HashSigil struct {
 	Hash crypto.Hash
 }
@@ -211,6 +217,7 @@ func (s *HashSigil) Out(data []byte) ([]byte, error) {
 }
 
 // NewSigil is a factory function that returns a Sigil based on a string name.
+// It is the primary way to create Sigil instances.
 func NewSigil(name string) (Sigil, error) {
 	switch name {
 	case "reverse":

@@ -13,20 +13,29 @@ import (
 )
 
 const (
-	Version       = 2
+	// Version is the current version of the .trix file format.
+	Version = 2
+	// MaxHeaderSize is the maximum allowed size for the header.
 	MaxHeaderSize = 16 * 1024 * 1024 // 16 MB
 )
 
 var (
+	// ErrInvalidMagicNumber is returned when the magic number is incorrect.
 	ErrInvalidMagicNumber = errors.New("trix: invalid magic number")
-	ErrInvalidVersion     = errors.New("trix: invalid version")
-	ErrMagicNumberLength  = errors.New("trix: magic number must be 4 bytes long")
-	ErrNilSigil           = errors.New("trix: sigil cannot be nil")
-	ErrChecksumMismatch   = errors.New("trix: checksum mismatch")
-	ErrHeaderTooLarge     = errors.New("trix: header size exceeds maximum allowed")
+	// ErrInvalidVersion is returned when the version is incorrect.
+	ErrInvalidVersion = errors.New("trix: invalid version")
+	// ErrMagicNumberLength is returned when the magic number is not 4 bytes long.
+	ErrMagicNumberLength = errors.New("trix: magic number must be 4 bytes long")
+	// ErrNilSigil is returned when a sigil is nil.
+	ErrNilSigil = errors.New("trix: sigil cannot be nil")
+	// ErrChecksumMismatch is returned when the checksum does not match.
+	ErrChecksumMismatch = errors.New("trix: checksum mismatch")
+	// ErrHeaderTooLarge is returned when the header size exceeds the maximum allowed.
+	ErrHeaderTooLarge = errors.New("trix: header size exceeds maximum allowed")
 )
 
 // Trix represents the structure of a .trix file.
+// It contains a header, a payload, and optional sigils for data transformation.
 type Trix struct {
 	Header       map[string]interface{}
 	Payload      []byte
@@ -36,6 +45,7 @@ type Trix struct {
 }
 
 // Encode serializes a Trix struct into the .trix binary format.
+// It returns the encoded data as a byte slice.
 func Encode(trix *Trix, magicNumber string, w io.Writer) ([]byte, error) {
 	if len(magicNumber) != 4 {
 		return nil, ErrMagicNumberLength
@@ -99,6 +109,7 @@ func Encode(trix *Trix, magicNumber string, w io.Writer) ([]byte, error) {
 }
 
 // Decode deserializes the .trix binary format into a Trix struct.
+// It returns the decoded Trix struct.
 // Note: Sigils are not stored in the format and must be re-attached by the caller.
 func Decode(data []byte, magicNumber string, r io.Reader) (*Trix, error) {
 	if len(magicNumber) != 4 {
@@ -176,6 +187,7 @@ func Decode(data []byte, magicNumber string, r io.Reader) (*Trix, error) {
 }
 
 // Pack applies the In method of all attached sigils to the payload.
+// It modifies the Trix struct in place.
 func (t *Trix) Pack() error {
 	for _, sigilName := range t.InSigils {
 		sigil, err := enchantrix.NewSigil(sigilName)
@@ -191,6 +203,7 @@ func (t *Trix) Pack() error {
 }
 
 // Unpack applies the Out method of all sigils in reverse order.
+// It modifies the Trix struct in place.
 func (t *Trix) Unpack() error {
 	sigilNames := t.OutSigils
 	if len(sigilNames) == 0 {

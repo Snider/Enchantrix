@@ -17,12 +17,14 @@ import (
 )
 
 // Service is the main struct for the crypt service.
+// It provides methods for hashing, checksums, and encryption.
 type Service struct {
 	rsa *rsa.Service
 	pgp *pgp.Service
 }
 
 // NewService creates a new crypt Service and initialises its embedded services.
+// It returns a new Service.
 func NewService() *Service {
 	return &Service{
 		rsa: rsa.NewService(),
@@ -34,11 +36,16 @@ func NewService() *Service {
 type HashType string
 
 const (
-	LTHN   HashType = "lthn"
+	// LTHN is a custom quasi-salted hashing algorithm.
+	LTHN HashType = "lthn"
+	// SHA512 is the SHA-512 hashing algorithm.
 	SHA512 HashType = "sha512"
+	// SHA256 is the SHA-256 hashing algorithm.
 	SHA256 HashType = "sha256"
-	SHA1   HashType = "sha1"
-	MD5    HashType = "md5"
+	// SHA1 is the SHA-1 hashing algorithm.
+	SHA1 HashType = "sha1"
+	// MD5 is the MD5 hashing algorithm.
+	MD5 HashType = "md5"
 )
 
 // --- Hashing ---
@@ -54,6 +61,7 @@ func (s *Service) IsHashAlgo(algo string) bool {
 }
 
 // Hash computes a hash of the payload using the specified algorithm.
+// It returns the hash as a hex-encoded string.
 func (s *Service) Hash(lib HashType, payload string) string {
 	switch lib {
 	case LTHN:
@@ -78,6 +86,7 @@ func (s *Service) Hash(lib HashType, payload string) string {
 // --- Checksums ---
 
 // Luhn validates a number using the Luhn algorithm.
+// It is typically used to validate credit card numbers.
 func (s *Service) Luhn(payload string) bool {
 	payload = strings.ReplaceAll(payload, " ", "")
 	if len(payload) <= 1 {
@@ -106,6 +115,7 @@ func (s *Service) Luhn(payload string) bool {
 }
 
 // Fletcher16 computes the Fletcher-16 checksum.
+// It is a fast checksum algorithm that is more reliable than a simple sum.
 func (s *Service) Fletcher16(payload string) uint16 {
 	data := []byte(payload)
 	var sum1, sum2 uint16
@@ -117,6 +127,7 @@ func (s *Service) Fletcher16(payload string) uint16 {
 }
 
 // Fletcher32 computes the Fletcher-32 checksum.
+// It provides better error detection than Fletcher-16.
 func (s *Service) Fletcher32(payload string) uint32 {
 	data := []byte(payload)
 	if len(data)%2 != 0 {
@@ -133,6 +144,7 @@ func (s *Service) Fletcher32(payload string) uint32 {
 }
 
 // Fletcher64 computes the Fletcher-64 checksum.
+// It provides the best error detection of the Fletcher algorithms.
 func (s *Service) Fletcher64(payload string) uint64 {
 	data := []byte(payload)
 	if len(data)%4 != 0 {
@@ -186,36 +198,42 @@ func (s *Service) ensurePGP() {
 }
 
 // GeneratePGPKeyPair creates a new PGP key pair.
+// It returns the public and private keys in PEM format.
 func (s *Service) GeneratePGPKeyPair(name, email, comment string) (publicKey, privateKey []byte, err error) {
 	s.ensurePGP()
 	return s.pgp.GenerateKeyPair(name, email, comment)
 }
 
 // EncryptPGP encrypts data with a public key.
+// It returns the encrypted data.
 func (s *Service) EncryptPGP(publicKey, data []byte) ([]byte, error) {
 	s.ensurePGP()
 	return s.pgp.Encrypt(publicKey, data)
 }
 
 // DecryptPGP decrypts data with a private key.
+// It returns the decrypted data.
 func (s *Service) DecryptPGP(privateKey, ciphertext []byte) ([]byte, error) {
 	s.ensurePGP()
 	return s.pgp.Decrypt(privateKey, ciphertext)
 }
 
 // SignPGP creates a detached signature for a message.
+// It returns the signature.
 func (s *Service) SignPGP(privateKey, data []byte) ([]byte, error) {
 	s.ensurePGP()
 	return s.pgp.Sign(privateKey, data)
 }
 
 // VerifyPGP verifies a detached signature for a message.
+// It returns an error if the signature is invalid.
 func (s *Service) VerifyPGP(publicKey, data, signature []byte) error {
 	s.ensurePGP()
 	return s.pgp.Verify(publicKey, data, signature)
 }
 
 // SymmetricallyEncryptPGP encrypts data with a passphrase.
+// It returns the encrypted data.
 func (s *Service) SymmetricallyEncryptPGP(passphrase, data []byte) ([]byte, error) {
 	s.ensurePGP()
 	if len(passphrase) == 0 {
