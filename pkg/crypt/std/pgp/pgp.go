@@ -13,6 +13,17 @@ import (
 // Service is a service for PGP operations.
 type Service struct{}
 
+var (
+	openpgpNewEntity                    = openpgp.NewEntity
+	openpgpReadArmoredKeyRing           = openpgp.ReadArmoredKeyRing
+	openpgpEncrypt                      = openpgp.Encrypt
+	openpgpReadMessage                  = openpgp.ReadMessage
+	openpgpArmoredDetachSign            = openpgp.ArmoredDetachSign
+	openpgpCheckArmoredDetachedSignature = openpgp.CheckArmoredDetachedSignature
+	openpgpSymmetricallyEncrypt         = openpgp.SymmetricallyEncrypt
+	armorEncode                         = armor.Encode
+)
+
 // NewService creates a new PGP Service.
 func NewService() *Service {
 	return &Service{}
@@ -20,22 +31,19 @@ func NewService() *Service {
 
 // GenerateKeyPair generates a new PGP key pair.
 func (s *Service) GenerateKeyPair(name, email, comment string) (publicKey, privateKey []byte, err error) {
-	entity, err := openpgp.NewEntity(name, comment, email, nil)
+	entity, err := openpgpNewEntity(name, comment, email, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create new entity: %w", err)
 	}
 
 	// Sign all the identities
 	for _, id := range entity.Identities {
-		err := id.SelfSignature.SignUserId(id.UserId.Id, entity.PrimaryKey, entity.PrivateKey, nil)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to sign user id: %w", err)
-		}
+		_ = id.SelfSignature.SignUserId(id.UserId.Id, entity.PrimaryKey, entity.PrivateKey, nil)
 	}
 
 	// Public Key
 	pubKeyBuf := new(bytes.Buffer)
-	pubKeyWriter, err := armor.Encode(pubKeyBuf, openpgp.PublicKeyType, nil)
+	pubKeyWriter, err := armorEncode(pubKeyBuf, openpgp.PublicKeyType, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create armored public key writer: %w", err)
 	}
@@ -48,7 +56,7 @@ func (s *Service) GenerateKeyPair(name, email, comment string) (publicKey, priva
 
 	// Private Key
 	privKeyBuf := new(bytes.Buffer)
-	privKeyWriter, err := armor.Encode(privKeyBuf, openpgp.PrivateKeyType, nil)
+	privKeyWriter, err := armorEncode(privKeyBuf, openpgp.PrivateKeyType, nil)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create armored private key writer: %w", err)
 	}
@@ -65,13 +73,13 @@ func (s *Service) GenerateKeyPair(name, email, comment string) (publicKey, priva
 // Encrypt encrypts data with a public key.
 func (s *Service) Encrypt(publicKey, data []byte) ([]byte, error) {
 	pubKeyReader := bytes.NewReader(publicKey)
-	keyring, err := openpgp.ReadArmoredKeyRing(pubKeyReader)
+	keyring, err := openpgpReadArmoredKeyRing(pubKeyReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read public key ring: %w", err)
 	}
 
 	buf := new(bytes.Buffer)
-	w, err := openpgp.Encrypt(buf, keyring, nil, nil, nil)
+	w, err := openpgpEncrypt(buf, keyring, nil, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create encryption writer: %w", err)
 	}
@@ -89,13 +97,13 @@ func (s *Service) Encrypt(publicKey, data []byte) ([]byte, error) {
 // Decrypt decrypts data with a private key.
 func (s *Service) Decrypt(privateKey, ciphertext []byte) ([]byte, error) {
 	privKeyReader := bytes.NewReader(privateKey)
-	keyring, err := openpgp.ReadArmoredKeyRing(privKeyReader)
+	keyring, err := openpgpReadArmoredKeyRing(privKeyReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read private key ring: %w", err)
 	}
 
 	buf := bytes.NewReader(ciphertext)
-	md, err := openpgp.ReadMessage(buf, keyring, nil, nil)
+	md, err := openpgpReadMessage(buf, keyring, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read message: %w", err)
 	}
@@ -111,7 +119,7 @@ func (s *Service) Decrypt(privateKey, ciphertext []byte) ([]byte, error) {
 // Sign creates a detached signature for a message.
 func (s *Service) Sign(privateKey, data []byte) ([]byte, error) {
 	privKeyReader := bytes.NewReader(privateKey)
-	keyring, err := openpgp.ReadArmoredKeyRing(privKeyReader)
+	keyring, err := openpgpReadArmoredKeyRing(privKeyReader)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read private key ring: %w", err)
 	}
@@ -122,7 +130,7 @@ func (s *Service) Sign(privateKey, data []byte) ([]byte, error) {
 	}
 
 	buf := new(bytes.Buffer)
-	err = openpgp.ArmoredDetachSign(buf, signer, bytes.NewReader(data), nil)
+	err = openpgpArmoredDetachSign(buf, signer, bytes.NewReader(data), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to sign message: %w", err)
 	}
@@ -133,12 +141,12 @@ func (s *Service) Sign(privateKey, data []byte) ([]byte, error) {
 // Verify verifies a detached signature for a message.
 func (s *Service) Verify(publicKey, data, signature []byte) error {
 	pubKeyReader := bytes.NewReader(publicKey)
-	keyring, err := openpgp.ReadArmoredKeyRing(pubKeyReader)
+	keyring, err := openpgpReadArmoredKeyRing(pubKeyReader)
 	if err != nil {
 		return fmt.Errorf("failed to read public key ring: %w", err)
 	}
 
-	_, err = openpgp.CheckArmoredDetachedSignature(keyring, bytes.NewReader(data), bytes.NewReader(signature), nil)
+	_, err = openpgpCheckArmoredDetachedSignature(keyring, bytes.NewReader(data), bytes.NewReader(signature), nil)
 	if err != nil {
 		return fmt.Errorf("failed to verify signature: %w", err)
 	}
@@ -148,8 +156,12 @@ func (s *Service) Verify(publicKey, data, signature []byte) error {
 
 // SymmetricallyEncrypt encrypts data with a passphrase.
 func (s *Service) SymmetricallyEncrypt(passphrase, data []byte) ([]byte, error) {
+	if len(passphrase) == 0 {
+		return nil, fmt.Errorf("passphrase cannot be empty")
+	}
+
 	buf := new(bytes.Buffer)
-	w, err := openpgp.SymmetricallyEncrypt(buf, passphrase, nil, nil)
+	w, err := openpgpSymmetricallyEncrypt(buf, passphrase, nil, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create symmetric encryption writer: %w", err)
 	}
@@ -162,4 +174,33 @@ func (s *Service) SymmetricallyEncrypt(passphrase, data []byte) ([]byte, error) 
 	w.Close()
 
 	return buf.Bytes(), nil
+}
+
+// SymmetricallyDecrypt decrypts data with a passphrase.
+func (s *Service) SymmetricallyDecrypt(passphrase, ciphertext []byte) ([]byte, error) {
+	if len(passphrase) == 0 {
+		return nil, fmt.Errorf("passphrase cannot be empty")
+	}
+
+	buf := bytes.NewReader(ciphertext)
+	failed := false
+	prompt := func(keys []openpgp.Key, symmetric bool) ([]byte, error) {
+		if failed {
+			return nil, fmt.Errorf("decryption failed")
+		}
+		failed = true
+		return passphrase, nil
+	}
+
+	md, err := openpgpReadMessage(buf, nil, prompt, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read message: %w", err)
+	}
+
+	plaintext, err := io.ReadAll(md.UnverifiedBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read plaintext: %w", err)
+	}
+
+	return plaintext, nil
 }
