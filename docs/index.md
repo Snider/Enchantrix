@@ -6,6 +6,10 @@ Enchantrix is a Go-based crypto library and miner application. This documentatio
 
 The `.trix` file format is a generic and flexible binary container for storing an arbitrary data payload alongside structured metadata. For more information, see the [Trix File Format](./trix_format.md) page.
 
+## CLI Reference
+
+Enchantrix provides a command-line tool for encoding, decoding, and hashing data. See the [CLI Reference](./cli.md) for detailed usage instructions.
+
 ## Examples
 
 The following pages provide examples of how to use the Enchantrix library:
@@ -14,4 +18,5 @@ The following pages provide examples of how to use the Enchantrix library:
 *   [Hashing](./hashing.md)
 *   [Checksums](./checksums.md)
 *   [RSA](./rsa.md)
+*   [PGP](./pgp.md)
 *   [Standalone Sigils](./standalone_sigils.md)
