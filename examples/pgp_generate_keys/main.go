@@ -1,3 +1,10 @@
+// Example: PGP key pair generation
+//
+// This example demonstrates generating an OpenPGP key pair with
+// name, email, and comment metadata. The output is ASCII-armored
+// for easy storage and distribution.
+//
+// Run with: go run examples/pgp_generate_keys/main.go
 package main
 
 import (

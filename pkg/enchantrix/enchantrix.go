@@ -1,11 +1,38 @@
+// Package enchantrix provides the Sigil transformation framework for composable,
+// reversible data transformations. See RFC-0003 for the formal specification.
+//
+// Sigils are the core abstraction - each sigil implements a specific transformation
+// (encoding, compression, hashing, encryption) with a uniform interface. Sigils can
+// be chained together to create transformation pipelines.
+//
+// Example usage:
+//
+//	hexSigil, _ := enchantrix.NewSigil("hex")
+//	base64Sigil, _ := enchantrix.NewSigil("base64")
+//	result, _ := enchantrix.Transmute(data, []enchantrix.Sigil{hexSigil, base64Sigil})
 package enchantrix
 
 // Sigil defines the interface for a data transformer.
-// A Sigil is a reversible or irreversible transformation of a byte slice.
+//
+// A Sigil represents a single transformation unit that can be applied to byte data.
+// Sigils may be reversible (encoding, compression, encryption) or irreversible (hashing).
+//
+// For reversible sigils: Out(In(x)) == x for all valid x
+// For irreversible sigils: Out returns the input unchanged
+// For symmetric sigils: In(x) == Out(x)
+//
+// Implementations must handle nil input by returning nil without error,
+// and empty input by returning an empty slice without error.
 type Sigil interface {
-	// In transforms the data.
+	// In applies the forward transformation to the data.
+	// For encoding sigils, this encodes the data.
+	// For compression sigils, this compresses the data.
+	// For hash sigils, this computes the digest.
 	In(data []byte) ([]byte, error)
-	// Out reverses the transformation.
+
+	// Out applies the reverse transformation to the data.
+	// For reversible sigils, this recovers the original data.
+	// For irreversible sigils (e.g., hashing), this returns the input unchanged.
 	Out(data []byte) ([]byte, error)
 }
 
@@ -14,7 +41,13 @@ type Enchantrix interface {
 	Transmute(data []byte, sigils []Sigil) ([]byte, error)
 }
 
-// Transmute is a helper function for applying a series of sigils to data.
+// Transmute applies a series of sigils to data in sequence.
+//
+// Each sigil's In method is called in order, with the output of one sigil
+// becoming the input of the next. If any sigil returns an error, Transmute
+// stops immediately and returns nil with that error.
+//
+// To reverse a transmutation, call each sigil's Out method in reverse order.
 func Transmute(data []byte, sigils []Sigil) ([]byte, error) {
 	var err error
 	for _, sigil := range sigils {

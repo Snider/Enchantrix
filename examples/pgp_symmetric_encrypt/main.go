@@ -1,3 +1,10 @@
+// Example: PGP symmetric (passphrase-based) encryption
+//
+// This example demonstrates symmetric encryption using a passphrase
+// instead of public/private key pairs. Useful when you need to share
+// encrypted data with someone using a pre-shared password.
+//
+// Run with: go run examples/pgp_symmetric_encrypt/main.go
 package main
 
 import (

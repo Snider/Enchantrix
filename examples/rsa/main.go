@@ -1,3 +1,10 @@
+// Example: RSA encryption and decryption
+//
+// This example demonstrates RSA key generation, encryption, and decryption
+// using the crypt service. RSA is suitable for encrypting small amounts of
+// data or for key exchange protocols.
+//
+// Run with: go run examples/rsa/main.go
 package main
 
 import (

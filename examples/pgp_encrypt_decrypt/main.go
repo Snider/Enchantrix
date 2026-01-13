@@ -1,3 +1,10 @@
+// Example: PGP encryption and decryption
+//
+// This example demonstrates OpenPGP key generation, asymmetric encryption,
+// and decryption. PGP provides end-to-end encryption with ASCII-armored
+// output suitable for email and text-based transport.
+//
+// Run with: go run examples/pgp_encrypt_decrypt/main.go
 package main
 
 import (

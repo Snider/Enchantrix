@@ -1,3 +1,9 @@
+// Example: Hashing with multiple algorithms
+//
+// This example demonstrates how to use the crypt service to compute hashes
+// using various algorithms including the custom LTHN quasi-salted hash.
+//
+// Run with: go run examples/hash/main.go
 package main
 
 import (

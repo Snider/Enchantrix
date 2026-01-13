@@ -1,3 +1,19 @@
+// Package lthn implements the LTHN quasi-salted hash algorithm (RFC-0004).
+//
+// LTHN produces deterministic, verifiable hashes without requiring separate salt
+// storage. The salt is derived from the input itself through:
+//  1. Reversing the input string
+//  2. Applying "leet speak" style character substitutions
+//
+// The final hash is: SHA256(input || derived_salt)
+//
+// This is suitable for content identifiers, cache keys, and deduplication.
+// NOT suitable for password hashing - use bcrypt, Argon2, or scrypt instead.
+//
+// Example:
+//
+//	hash := lthn.Hash("hello")
+//	valid := lthn.Verify("hello", hash)  // true
 package lthn
 
 import (
@@ -5,39 +21,53 @@ import (
 	"encoding/hex"
 )
 
-// keyMap is the default character-swapping map used for the quasi-salting process.
+// keyMap defines the character substitutions for quasi-salt derivation.
+// These are inspired by "leet speak" conventions for letter-number substitution.
+// The mapping is bidirectional for most characters but NOT fully symmetric.
 var keyMap = map[rune]rune{
-	'o': '0',
-	'l': '1',
-	'e': '3',
-	'a': '4',
-	's': 'z',
-	't': '7',
-	'0': 'o',
-	'1': 'l',
-	'3': 'e',
-	'4': 'a',
-	'7': 't',
+	'o': '0', // letter O -> zero
+	'l': '1', // letter L -> one
+	'e': '3', // letter E -> three
+	'a': '4', // letter A -> four
+	's': 'z', // letter S -> Z
+	't': '7', // letter T -> seven
+	'0': 'o', // zero -> letter O
+	'1': 'l', // one -> letter L
+	'3': 'e', // three -> letter E
+	'4': 'a', // four -> letter A
+	'7': 't', // seven -> letter T
 }
 
-// SetKeyMap sets the key map for the notarisation process.
+// SetKeyMap replaces the default character substitution map.
+// Use this to customize the quasi-salt derivation for specific applications.
+// Changes affect all subsequent Hash and Verify calls.
 func SetKeyMap(newKeyMap map[rune]rune) {
 	keyMap = newKeyMap
 }
 
-// GetKeyMap gets the current key map.
+// GetKeyMap returns the current character substitution map.
 func GetKeyMap() map[rune]rune {
 	return keyMap
 }
 
-// Hash creates a reproducible hash from a string.
+// Hash computes the LTHN hash of the input string.
+//
+// The algorithm:
+//  1. Derive a quasi-salt by reversing the input and applying character substitutions
+//  2. Concatenate: input + salt
+//  3. Compute SHA-256 of the concatenated string
+//  4. Return the hex-encoded digest (64 characters, lowercase)
+//
+// The same input always produces the same hash, enabling verification
+// without storing a separate salt value.
 func Hash(input string) string {
 	salt := createSalt(input)
 	hash := sha256.Sum256([]byte(input + salt))
 	return hex.EncodeToString(hash[:])
 }
 
-// createSalt creates a quasi-salt from a string by reversing it and swapping characters.
+// createSalt derives a quasi-salt by reversing the input and applying substitutions.
+// For example: "hello" -> reversed "olleh" -> substituted "011eh"
 func createSalt(input string) string {
 	if input == "" {
 		return ""
@@ -55,7 +85,10 @@ func createSalt(input string) string {
 	return string(salt)
 }
 
-// Verify checks if an input string matches a given hash.
+// Verify checks if an input string produces the given hash.
+// Returns true if Hash(input) equals the provided hash value.
+// Uses direct string comparison - for security-critical applications,
+// consider using constant-time comparison.
 func Verify(input string, hash string) bool {
 	return Hash(input) == hash
 }

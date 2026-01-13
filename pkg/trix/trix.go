@@ -1,3 +1,23 @@
+// Package trix implements the TRIX binary container format (RFC-0002).
+//
+// The .trix format is a generic, protocol-agnostic container for storing
+// arbitrary binary payloads alongside structured JSON metadata. It consists of:
+//
+//	[Magic Number (4)] [Version (1)] [Header Length (4)] [JSON Header] [Payload]
+//
+// Key features:
+//   - Custom 4-byte magic number for application-specific identification
+//   - Extensible JSON header for metadata (content type, checksums, timestamps)
+//   - Optional integrity verification via configurable checksum algorithms
+//   - Integration with the Sigil transformation framework for encoding/compression
+//
+// Example usage:
+//
+//	container := &trix.Trix{
+//	    Header:  map[string]interface{}{"content_type": "text/plain"},
+//	    Payload: []byte("Hello, World!"),
+//	}
+//	encoded, _ := trix.Encode(container, "MYAP", nil)
 package trix
 
 import (
@@ -14,8 +34,10 @@ import (
 
 const (
 	// Version is the current version of the .trix file format.
+	// See RFC-0002 for version history and compatibility notes.
 	Version = 2
-	// MaxHeaderSize is the maximum allowed size for the header.
+	// MaxHeaderSize is the maximum allowed size for the header (16 MB).
+	// This limit prevents denial-of-service attacks via large header allocations.
 	MaxHeaderSize = 16 * 1024 * 1024 // 16 MB
 )
 
@@ -34,13 +56,29 @@ var (
 	ErrHeaderTooLarge = errors.New("trix: header size exceeds maximum allowed")
 )
 
-// Trix represents the structure of a .trix file.
-// It contains a header, a payload, and optional sigils for data transformation.
+// Trix represents a .trix container with header metadata and binary payload.
+//
+// The Header field holds arbitrary JSON-serializable metadata. Common fields include:
+//   - content_type: MIME type of the original payload
+//   - created_at: ISO 8601 timestamp
+//   - encryption_algorithm: Algorithm used for encryption (if applicable)
+//   - checksum: Hex-encoded integrity checksum (auto-populated if ChecksumAlgo is set)
+//
+// The InSigils and OutSigils fields specify transformation pipelines:
+//   - InSigils: Applied during Pack() in order (e.g., ["gzip", "base64"])
+//   - OutSigils: Applied during Unpack() in reverse order (defaults to InSigils)
 type Trix struct {
-	Header       map[string]interface{}
-	Payload      []byte
-	InSigils     []string       `json:"-"` // Ignore Sigils during JSON marshaling
-	OutSigils    []string       `json:"-"` // Ignore Sigils during JSON marshaling
+	// Header contains JSON-serializable metadata about the payload.
+	Header map[string]interface{}
+	// Payload is the binary data stored in the container.
+	Payload []byte
+	// InSigils lists sigil names to apply during Pack (forward transformation).
+	InSigils []string `json:"-"`
+	// OutSigils lists sigil names to apply during Unpack (reverse transformation).
+	// If empty, InSigils is used in reverse order.
+	OutSigils []string `json:"-"`
+	// ChecksumAlgo specifies the hash algorithm for integrity verification.
+	// If set, a checksum is computed and stored in the header during Encode.
 	ChecksumAlgo crypt.HashType `json:"-"`
 }
 

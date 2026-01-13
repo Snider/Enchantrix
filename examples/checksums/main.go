@@ -1,3 +1,9 @@
+// Example: Checksum algorithms
+//
+// This example demonstrates Luhn and Fletcher checksum algorithms
+// for data integrity verification.
+//
+// Run with: go run examples/checksums/main.go
 package main
 
 import (

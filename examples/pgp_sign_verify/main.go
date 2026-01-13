@@ -1,3 +1,10 @@
+// Example: PGP digital signatures
+//
+// This example demonstrates creating and verifying PGP digital signatures.
+// Signatures provide authenticity and integrity verification without
+// encrypting the message content.
+//
+// Run with: go run examples/pgp_sign_verify/main.go
 package main
 
 import (

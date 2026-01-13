@@ -1,5 +1,16 @@
 package enchantrix
 
+// This file implements the Pre-Obfuscation Layer Protocol (RFC-0001) with
+// XChaCha20-Poly1305 encryption. The protocol applies a reversible transformation
+// to plaintext BEFORE it reaches CPU encryption routines, providing defense-in-depth
+// against side-channel attacks.
+//
+// The encryption flow is:
+//   plaintext -> obfuscate(nonce) -> encrypt -> [nonce || ciphertext || tag]
+//
+// The decryption flow is:
+//   [nonce || ciphertext || tag] -> decrypt -> deobfuscate(nonce) -> plaintext
+
 import (
 	"crypto/rand"
 	"crypto/sha256"
@@ -22,16 +33,31 @@ var (
 )
 
 // PreObfuscator applies a reversible transformation to data before encryption.
-// This ensures that raw plaintext is never sent directly to CPU encryption routines.
+// This ensures that raw plaintext patterns are never sent directly to CPU
+// encryption routines, providing defense against side-channel attacks.
+//
+// Implementations must be deterministic: given the same entropy, the transformation
+// must be perfectly reversible: Deobfuscate(Obfuscate(x, e), e) == x
 type PreObfuscator interface {
-	// Obfuscate transforms plaintext before encryption.
+	// Obfuscate transforms plaintext before encryption using the provided entropy.
+	// The entropy is typically the encryption nonce, ensuring the transformation
+	// is unique per-encryption without additional random generation.
 	Obfuscate(data []byte, entropy []byte) []byte
+
 	// Deobfuscate reverses the transformation after decryption.
+	// Must be called with the same entropy used during Obfuscate.
 	Deobfuscate(data []byte, entropy []byte) []byte
 }
 
-// XORObfuscator performs XOR-based obfuscation using entropy-derived key stream.
-// This is a reversible transformation that ensures no cleartext patterns remain.
+// XORObfuscator performs XOR-based obfuscation using an entropy-derived key stream.
+//
+// The key stream is generated using SHA-256 in counter mode:
+//
+//	keyStream[i*32:(i+1)*32] = SHA256(entropy || BigEndian64(i))
+//
+// This provides a cryptographically uniform key stream that decorrelates
+// plaintext patterns from the data seen by the encryption routine.
+// XOR is symmetric, so obfuscation and deobfuscation use the same operation.
 type XORObfuscator struct{}
 
 // Obfuscate XORs the data with a key stream derived from the entropy.
@@ -87,8 +113,16 @@ func (x *XORObfuscator) deriveKeyStream(entropy []byte, length int) []byte {
 	return stream
 }
 
-// ShuffleMaskObfuscator applies byte-level shuffling based on entropy.
-// This provides additional diffusion before encryption.
+// ShuffleMaskObfuscator provides stronger obfuscation through byte shuffling and masking.
+//
+// The obfuscation process:
+//  1. Generate a mask from entropy using SHA-256 in counter mode
+//  2. XOR the data with the mask
+//  3. Generate a deterministic permutation using Fisher-Yates shuffle
+//  4. Reorder bytes according to the permutation
+//
+// This provides both value transformation (XOR mask) and position transformation
+// (shuffle), making pattern analysis more difficult than XOR alone.
 type ShuffleMaskObfuscator struct{}
 
 // Obfuscate shuffles bytes and applies a mask derived from entropy.
@@ -208,9 +242,9 @@ func (s *ShuffleMaskObfuscator) deriveMask(entropy []byte, length int) []byte {
 // Unlike demo implementations, the nonce is ONLY embedded in the ciphertext,
 // not exposed separately in headers.
 type ChaChaPolySigil struct {
-	Key          []byte
-	Obfuscator   PreObfuscator
-	randReader   io.Reader // for testing injection
+	Key        []byte
+	Obfuscator PreObfuscator
+	randReader io.Reader // for testing injection
 }
 
 // NewChaChaPolySigil creates a new encryption sigil with the given key.
