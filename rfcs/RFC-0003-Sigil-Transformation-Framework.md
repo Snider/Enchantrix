@@ -251,7 +251,46 @@ Pretty-prints JSON data with indentation.
 | In | Indent JSON (2 spaces) |
 | Out | Passthrough |
 
-### 5.5 Hash Sigils
+### 5.5 Encryption Sigils
+
+Encryption sigils provide authenticated encryption using AEAD ciphers.
+
+#### 5.5.1 ChaCha20-Poly1305 Sigil
+
+Encrypts data using XChaCha20-Poly1305 authenticated encryption.
+
+| Property | Value |
+|----------|-------|
+| Name | `chacha20poly1305` |
+| Category | Reversible |
+| Key size | 32 bytes |
+| Nonce size | 24 bytes (XChaCha variant) |
+| Tag size | 16 bytes |
+| In | Encrypt (generates nonce, prepends to output) |
+| Out | Decrypt (extracts nonce from input prefix) |
+
+**Critical Implementation Detail**: The nonce is embedded IN the ciphertext output, not transmitted separately:
+
+```
+In(plaintext) -> [24-byte nonce][ciphertext][16-byte tag]
+Out(ciphertext_with_nonce) -> plaintext
+```
+
+**Construction**:
+
+```go
+sigil, err := NewChaChaPolySigil(key)  // key must be 32 bytes
+ciphertext, err := sigil.In(plaintext)
+plaintext, err := sigil.Out(ciphertext)
+```
+
+**Security Properties**:
+- Authenticated: Poly1305 MAC prevents tampering
+- Confidential: ChaCha20 stream cipher
+- Nonce uniqueness: Random 24-byte nonce per encryption
+- No nonce management required by caller
+
+### 5.6 Hash Sigils
 
 Hash sigils compute cryptographic digests. They are irreversible.
 
@@ -433,13 +472,23 @@ When combining compression and encryption sigils:
 - Comparison operations should be constant-time where security-relevant
 - Hash comparisons should use constant-time comparison functions
 
-## 10. References
+## 10. Future Work
+
+- [ ] AES-GCM encryption sigil for environments requiring AES
+- [ ] Zstd compression sigil with configurable compression levels
+- [ ] Streaming sigil interface for large data processing
+- [ ] Sigil metadata interface for reporting transformation properties
+- [ ] WebAssembly compilation for browser-based sigil operations
+- [ ] Hardware acceleration detection and utilization
+
+## 11. References
 
 - [RFC 4648] The Base16, Base32, and Base64 Data Encodings
 - [RFC 1952] GZIP file format specification
 - [RFC 8259] The JavaScript Object Notation (JSON) Data Interchange Format
 - [FIPS 180-4] Secure Hash Standard
 - [FIPS 202] SHA-3 Standard
+- [RFC 8439] ChaCha20 and Poly1305 for IETF Protocols
 
 ---
 
@@ -451,8 +500,10 @@ When combining compression and encryption sigils:
 | `hex` | Encoding | Yes | Hexadecimal |
 | `base64` | Encoding | Yes | RFC 4648 |
 | `gzip` | Compression | Yes | RFC 1952 |
+| `zstd` | Compression | Yes | Zstandard |
 | `json` | Formatting | Partial | Compacts JSON |
 | `json-indent` | Formatting | Partial | Pretty-prints JSON |
+| `chacha20poly1305` | Encryption | Yes | XChaCha20-Poly1305 AEAD |
 | `md4` | Hash | No | 128-bit |
 | `md5` | Hash | No | 128-bit |
 | `sha1` | Hash | No | 160-bit |

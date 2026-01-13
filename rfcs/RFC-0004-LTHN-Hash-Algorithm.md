@@ -180,6 +180,7 @@ function Verify(input: string, expectedHash: string) -> bool:
 | Deduplication | Good | Identify identical content |
 | File integrity | Moderate | Use with checksum comparison |
 | Non-critical checksums | Good | Simple verification |
+| Rolling key derivation | Good | Time-based key rotation (see 6.3) |
 
 ### 6.2 Not Recommended Uses
 
@@ -189,6 +190,54 @@ function Verify(input: string, expectedHash: string) -> bool:
 | Authentication tokens | Use HMAC or proper MACs |
 | Digital signatures | Use proper signature schemes |
 | Security-critical integrity | Use HMAC-SHA256 |
+
+### 6.3 Rolling Key Derivation Pattern
+
+LTHN is well-suited for deriving time-based rolling keys for streaming media or time-limited access control. The pattern combines a time period with user credentials:
+
+```
+streamKey = SHA256(LTHN(period + ":" + license + ":" + fingerprint))
+```
+
+#### 6.3.1 Cadence Formats
+
+| Cadence | Period Format | Example | Window |
+|---------|---------------|---------|--------|
+| daily | YYYY-MM-DD | "2026-01-13" | 24 hours |
+| 12h | YYYY-MM-DD-AM/PM | "2026-01-13-AM" | 12 hours |
+| 6h | YYYY-MM-DD-HH | "2026-01-13-00" | 6 hours (00, 06, 12, 18) |
+| 1h | YYYY-MM-DD-HH | "2026-01-13-15" | 1 hour |
+
+#### 6.3.2 Rolling Window Implementation
+
+For graceful key transitions, implementations should support a rolling window:
+
+```
+function GetRollingPeriods(cadence: string) -> (current: string, next: string):
+    now = currentTime()
+    current = formatPeriod(now, cadence)
+    next = formatPeriod(now + periodDuration(cadence), cadence)
+    return (current, next)
+```
+
+Content encrypted with rolling keys includes wrapped CEKs (Content Encryption Keys) for both current and next periods, allowing decryption during period transitions.
+
+#### 6.3.3 CEK Wrapping
+
+```
+// Wrap CEK for distribution
+For each period in [current, next]:
+    streamKey = SHA256(LTHN(period + ":" + license + ":" + fingerprint))
+    wrappedCEK = ChaCha20Poly1305_Encrypt(CEK, streamKey)
+    store (period, wrappedCEK) in header
+
+// Unwrap CEK for playback
+For each (period, wrappedCEK) in header:
+    streamKey = SHA256(LTHN(period + ":" + license + ":" + fingerprint))
+    CEK = ChaCha20Poly1305_Decrypt(wrappedCEK, streamKey)
+    if success: return CEK
+return error("no valid key for current period")
+```
 
 ## 7. Security Considerations
 
@@ -282,10 +331,52 @@ Conforming implementations SHOULD:
 
 Note: Key map only matches exact character codes, not normalized equivalents.
 
-## 10. References
+## 10. API Reference
+
+### 10.1 Go API
+
+```go
+import "github.com/Snider/Enchantrix/pkg/crypt"
+
+// Create crypt service
+svc := crypt.NewService()
+
+// Hash with LTHN
+hash := svc.Hash(crypt.LTHN, "input string")
+
+// Available hash types
+crypt.LTHN      // LTHN quasi-salted hash
+crypt.SHA256    // Standard SHA-256
+crypt.SHA512    // Standard SHA-512
+// ... other standard algorithms
+```
+
+### 10.2 Direct Usage
+
+```go
+import "github.com/Snider/Enchantrix/pkg/crypt/std/lthn"
+
+// Direct LTHN hash
+hash := lthn.Hash("input string")
+
+// Verify hash
+valid := lthn.Verify("input string", expectedHash)
+```
+
+## 11. Future Work
+
+- [ ] Custom key map configuration via API
+- [ ] WASM compilation for browser-based LTHN operations
+- [ ] Alternative underlying hash functions (SHA-3, BLAKE3)
+- [ ] Configurable salt derivation strategies
+- [ ] Performance optimization for high-throughput scenarios
+- [ ] Formal security analysis of rolling key pattern
+
+## 12. References
 
 - [FIPS 180-4] Secure Hash Standard (SHA-256)
 - [RFC 4648] The Base16, Base32, and Base64 Data Encodings
+- [RFC 8439] ChaCha20 and Poly1305 for IETF Protocols
 - [Wikipedia: Leet] History and conventions of leet speak character substitution
 
 ---

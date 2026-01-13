@@ -344,7 +344,15 @@ Permutation seed: SHA256(entropy || "permutation")
 Mask seed: SHA256(entropy || "mask" || 0x0000000000000000)
 ```
 
-## 10. References
+## 10. Future Work
+
+- [ ] Hardware-accelerated obfuscation implementations
+- [ ] Additional obfuscator algorithms (block-based, etc.)
+- [ ] Formal side-channel resistance analysis
+- [ ] Integration benchmarks with different AEAD ciphers
+- [ ] WASM compilation for browser environments
+
+## 11. References
 
 - [RFC 8439] ChaCha20 and Poly1305 for IETF Protocols
 - [RFC 7539] ChaCha20 and Poly1305 for IETF Protocols (obsoleted by 8439)

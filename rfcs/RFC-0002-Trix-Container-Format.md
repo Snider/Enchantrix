@@ -332,7 +332,18 @@ This section defines conventions for magic number allocation:
 | `\x00\x00\x00\x00` | Reserved (null) |
 | `\xFF\xFF\xFF\xFF` | Reserved (test/invalid) |
 
-### 8.2 Allocation Guidelines
+### 8.2 Registered Magic Numbers
+
+The following magic numbers are registered for specific applications:
+
+| Magic | Application | Description |
+|-------|-------------|-------------|
+| `SMSG` | Borg | Encrypted message/media container |
+| `STIM` | Borg | Encrypted TIM container bundle |
+| `STMF` | Borg | Secure To-Me Form (encrypted form data) |
+| `TRIX` | Borg | Encrypted DataNode archive |
+
+### 8.3 Allocation Guidelines
 
 Applications SHOULD:
 
@@ -381,7 +392,15 @@ Future versions may define:
 - Media type registration (e.g., `application/x-trix`)
 - Magic number registry
 
-## 11. References
+## 11. Future Work
+
+- [ ] Media type registration (`application/x-trix`, `application/x-smsg`, etc.)
+- [ ] Formal magic number registry with registration process
+- [ ] Streaming encoding/decoding for large payloads
+- [ ] Header compression for bandwidth-constrained environments
+- [ ] Sub-container nesting specification (Trix within Trix)
+
+## 12. References
 
 - [RFC 8259] The JavaScript Object Notation (JSON) Data Interchange Format
 - [RFC 2119] Key words for use in RFCs to Indicate Requirement Levels
