@@ -1,6 +1,6 @@
 module github.com/Snider/Enchantrix
 
-go 1.25
+go 1.25.3
 
 require (
 	github.com/ProtonMail/go-crypto v1.3.0
@@ -10,7 +10,7 @@ require (
 )
 
 require (
-	github.com/cloudflare/circl v1.6.0 // indirect
+	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
