@@ -17,6 +17,8 @@ nav:
       - RSA: rsa.md
       - PGP: pgp.md
       - Standalone Sigils: standalone_sigils.md
+  - FAQ: faq.md
+  - Troubleshooting: troubleshooting.md
 markdown_extensions:
   - admonition
   - codehilite
