@@ -341,6 +341,7 @@ The following magic numbers are registered for specific applications:
 | `SMSG` | Borg | Encrypted message/media container |
 | `STIM` | Borg | Encrypted TIM container bundle |
 | `STMF` | Borg | Secure To-Me Form (encrypted form data) |
+| `KEYS` | Enchantrix | Encrypted key store container (RFC-0005) |
 | `TRIX` | Borg | Encrypted DataNode archive |
 
 ### 8.3 Allocation Guidelines
