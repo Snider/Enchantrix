@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/Snider/Enchantrix/pkg/enchantrix"
+	"forge.lthn.ai/Snider/Enchantrix/pkg/enchantrix"
 	"github.com/stretchr/testify/assert"
 )
 

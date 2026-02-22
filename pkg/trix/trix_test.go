@@ -8,8 +8,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/Snider/Enchantrix/pkg/crypt"
-	"github.com/Snider/Enchantrix/pkg/trix"
+	"forge.lthn.ai/Snider/Enchantrix/pkg/crypt"
+	"forge.lthn.ai/Snider/Enchantrix/pkg/trix"
 	"github.com/stretchr/testify/assert"
 )
 

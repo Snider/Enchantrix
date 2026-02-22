@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Snider/Enchantrix/pkg/crypt/std/lthn"
-	"github.com/Snider/Enchantrix/pkg/crypt/std/pgp"
-	"github.com/Snider/Enchantrix/pkg/crypt/std/rsa"
+	"forge.lthn.ai/Snider/Enchantrix/pkg/crypt/std/lthn"
+	"forge.lthn.ai/Snider/Enchantrix/pkg/crypt/std/pgp"
+	"forge.lthn.ai/Snider/Enchantrix/pkg/crypt/std/rsa"
 )
 
 // Service is the main struct for the crypt service.

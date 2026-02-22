@@ -4,7 +4,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/Snider/Enchantrix/pkg/enchantrix"
+	"forge.lthn.ai/Snider/Enchantrix/pkg/enchantrix"
 )
 
 var (

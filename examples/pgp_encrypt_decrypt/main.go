@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/Snider/Enchantrix/pkg/crypt"
+	"forge.lthn.ai/Snider/Enchantrix/pkg/crypt"
 )
 
 func main() {

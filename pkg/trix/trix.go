@@ -28,8 +28,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Snider/Enchantrix/pkg/crypt"
-	"github.com/Snider/Enchantrix/pkg/enchantrix"
+	"forge.lthn.ai/Snider/Enchantrix/pkg/crypt"
+	"forge.lthn.ai/Snider/Enchantrix/pkg/enchantrix"
 )
 
 const (
