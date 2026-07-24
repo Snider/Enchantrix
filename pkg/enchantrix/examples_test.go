@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"forge.lthn.ai/Snider/Enchantrix/pkg/enchantrix"
+	"github.com/Snider/Enchantrix/pkg/enchantrix"
 )
 
 func ExampleTransmute() {

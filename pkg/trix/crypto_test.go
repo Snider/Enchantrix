@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"forge.lthn.ai/Snider/Enchantrix/pkg/trix"
+	"github.com/Snider/Enchantrix/pkg/trix"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )

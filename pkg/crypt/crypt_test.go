@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"forge.lthn.ai/Snider/Enchantrix/pkg/crypt"
+	"github.com/Snider/Enchantrix/pkg/crypt"
 	"github.com/stretchr/testify/assert"
 )
 

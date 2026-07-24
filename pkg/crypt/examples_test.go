@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"forge.lthn.ai/Snider/Enchantrix/pkg/crypt"
+	"github.com/Snider/Enchantrix/pkg/crypt"
 )
 
 func ExampleService_Hash() {

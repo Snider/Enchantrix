@@ -9,7 +9,7 @@ package main
 import (
 	"fmt"
 
-	"forge.lthn.ai/Snider/Enchantrix/pkg/crypt"
+	"github.com/Snider/Enchantrix/pkg/crypt"
 )
 
 func main() {

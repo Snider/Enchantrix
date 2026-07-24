@@ -1,4 +1,4 @@
-module forge.lthn.ai/Snider/Enchantrix
+module github.com/Snider/Enchantrix
 
 go 1.25
 

@@ -8,6 +8,7 @@ import (
 
 	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/ProtonMail/go-crypto/openpgp/armor"
+	"github.com/ProtonMail/go-crypto/openpgp/packet"
 )
 
 // Service is a service for PGP operations.
@@ -29,9 +30,28 @@ func NewService() *Service {
 	return &Service{}
 }
 
-// GenerateKeyPair generates a new PGP key pair.
+// GenerateKeyPair generates a new PGP key pair using the library's
+// default algorithm (RSA-2048). Stays for back-compat with existing
+// callers (server.key bootstrap, etc); new callers wanting modern
+// algorithms should use GenerateKeyPairWithConfig.
 func (s *Service) GenerateKeyPair(name, email, comment string) (publicKey, privateKey []byte, err error) {
-	entity, err := openpgpNewEntity(name, comment, email, nil)
+	return s.GenerateKeyPairWithConfig(name, email, comment, nil)
+}
+
+// GenerateKeyPairWithConfig generates a new PGP key pair using the
+// supplied packet.Config to select the public-key algorithm + curve.
+// A nil config falls back to the openpgp library's default (RSA-2048),
+// matching the legacy GenerateKeyPair behaviour.
+//
+// For modern callers, the 2026 floor is Ed25519 + Curve25519:
+//
+//	cfg := &packet.Config{Algorithm: packet.PubKeyAlgoEdDSA, Curve: packet.Curve25519}
+//	pub, priv, err := s.GenerateKeyPairWithConfig("user", "user@lthn.local", "first-run", cfg)
+//
+// Ed25519 keypairs are ~50x faster to generate than RSA-2048 and
+// ~20x smaller on the wire (192 bytes vs 4096 bytes serialised).
+func (s *Service) GenerateKeyPairWithConfig(name, email, comment string, config *packet.Config) (publicKey, privateKey []byte, err error) {
+	entity, err := openpgpNewEntity(name, comment, email, config)
 	if err != nil {
 		return nil, nil, fmt.Errorf("failed to create new entity: %w", err)
 	}
@@ -154,14 +174,39 @@ func (s *Service) Verify(publicKey, data, signature []byte) error {
 	return nil
 }
 
-// SymmetricallyEncrypt encrypts data with a passphrase.
+// SymmetricallyEncrypt encrypts data with a passphrase using the
+// library's default cipher (AES-128) + S2K KDF iteration count.
+// Stays for back-compat with existing callers; new callers wanting
+// modern cipher choice should use SymmetricallyEncryptWithConfig.
 func (s *Service) SymmetricallyEncrypt(passphrase, data []byte) ([]byte, error) {
+	return s.SymmetricallyEncryptWithConfig(passphrase, data, nil)
+}
+
+// SymmetricallyEncryptWithConfig encrypts data with a passphrase using
+// the supplied packet.Config to select the symmetric cipher + S2K
+// iteration count. A nil config falls back to the openpgp library's
+// default (AES-128 + 16777216 iterations), matching the legacy
+// SymmetricallyEncrypt behaviour.
+//
+// For modern callers, the 2026 floor is AES-256 + the highest
+// standard iteration count:
+//
+//	cfg := &packet.Config{
+//	    DefaultCipher: packet.CipherAES256,
+//	    S2KConfig:     &s2k.Config{S2KCount: 65011712},
+//	}
+//	ct, err := s.SymmetricallyEncryptWithConfig(passphrase, plaintext, cfg)
+//
+// Argon2 S2K (RFC 9580) is not yet exported by the openpgp library;
+// iterated S2K at S2KCount=65011712 is the practical 2026 floor until
+// Argon2 lands upstream.
+func (s *Service) SymmetricallyEncryptWithConfig(passphrase, data []byte, config *packet.Config) ([]byte, error) {
 	if len(passphrase) == 0 {
 		return nil, fmt.Errorf("passphrase cannot be empty")
 	}
 
 	buf := new(bytes.Buffer)
-	w, err := openpgpSymmetricallyEncrypt(buf, passphrase, nil, nil)
+	w, err := openpgpSymmetricallyEncrypt(buf, passphrase, nil, config)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create symmetric encryption writer: %w", err)
 	}
