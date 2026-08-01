@@ -1,6 +1,7 @@
 package trix_test
 
 import (
+	"bytes"
 	"fmt"
 	"log"
 
@@ -68,6 +69,61 @@ func ExampleTrix_Unpack() {
 	fmt.Printf("Unpacked payload: %s\n", t.Payload)
 	// Output:
 	// Unpacked payload: secret message
+}
+
+func ExampleEncodeStream() {
+	// The payload is copied straight from reader to writer, so a container
+	// holding a multi-gigabyte log costs the same memory as a tiny one.
+	payload := bytes.NewReader([]byte("a very long state log"))
+
+	var out bytes.Buffer
+	n, err := trix.EncodeStream(map[string]interface{}{"kind": "state-kv"}, "KVST", payload, &out)
+	if err != nil {
+		log.Fatalf("EncodeStream failed: %v", err)
+	}
+	fmt.Printf("Container length: %d\n", n)
+	// Output:
+	// Container length: 49
+}
+
+func ExampleDecodeHeader() {
+	var container bytes.Buffer
+	if _, err := trix.EncodeStream(map[string]interface{}{"kind": "state-kv"}, "KVST", bytes.NewReader([]byte("binary tail")), &container); err != nil {
+		log.Fatalf("EncodeStream failed: %v", err)
+	}
+
+	header, payload, err := trix.DecodeHeader(bytes.NewReader(container.Bytes()), "KVST")
+	if err != nil {
+		log.Fatalf("DecodeHeader failed: %v", err)
+	}
+	// payload is positioned at the first payload byte — stream it anywhere.
+	var out bytes.Buffer
+	if _, err := out.ReadFrom(payload); err != nil {
+		log.Fatalf("copy failed: %v", err)
+	}
+	fmt.Printf("Header kind: %v\n", header["kind"])
+	fmt.Printf("Payload: %s\n", out.String())
+	// Output:
+	// Header kind: state-kv
+	// Payload: binary tail
+}
+
+func ExampleReadHeaderInfo() {
+	var container bytes.Buffer
+	if _, err := trix.EncodeStream(map[string]interface{}{"kind": "state-kv"}, "KVST", bytes.NewReader([]byte("binary tail")), &container); err != nil {
+		log.Fatalf("EncodeStream failed: %v", err)
+	}
+
+	// No payload byte is read — the offset is what an mmap would start from.
+	info, err := trix.ReadHeaderInfo(bytes.NewReader(container.Bytes()), "KVST")
+	if err != nil {
+		log.Fatalf("ReadHeaderInfo failed: %v", err)
+	}
+	fmt.Printf("Payload offset: %d\n", info.PayloadOffset)
+	fmt.Printf("Payload bytes: %d\n", info.PayloadBytes)
+	// Output:
+	// Payload offset: 28
+	// Payload bytes: 11
 }
 
 func ExampleTrix_Pack_checksum() {
