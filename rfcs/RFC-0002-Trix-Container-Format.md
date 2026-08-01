@@ -230,6 +230,31 @@ function EncodeWithChecksum(payload: bytes, header: object, magic: string, algo:
     return Encode(payload, header, magic)
 ```
 
+### 5.3 Streaming Encode
+
+For payloads too large to hold in memory, the payload is copied from a reader
+to the writer after the framing has been written:
+
+```
+function StreamEncode(payload: Reader, header: object, magic: string, writer: Writer) -> int:
+    header_bytes = JSON.serialize(header)
+    if length(header_bytes) > 16777215:
+        return error("header exceeds maximum size")
+
+    writer.write(magic)                            // 4 bytes
+    writer.write(0x02)                             // 1 byte
+    writer.write(BigEndian32(length(header_bytes)))// 4 bytes
+    writer.write(header_bytes)
+    copy(writer, payload)                          // never read-all
+
+    return total_bytes_written
+```
+
+Output MUST be byte-for-byte identical to `Encode` for the same header, magic
+and payload. A streaming encoder MUST NOT apply a transformation the caller
+did not ask for — no sigil, compression, checksum or encryption — so the
+binary tail stays identical to the source bytes.
+
 ## 6. Decoding Process
 
 ### 6.1 Algorithm
@@ -291,6 +316,35 @@ function StreamDecode(reader: Reader, expected_magic: string) -> (header: object
     // Return remaining reader for payload streaming
     return (header, reader)
 ```
+
+A streaming implementation MUST consume exactly `9 + header_length` bytes
+before returning, so the reader is left positioned on the first payload byte.
+Read-ahead buffering breaks the contract.
+
+A streaming decoder MUST NOT verify a `checksum` header field, since doing so
+requires the whole payload — the property streaming exists to avoid. Callers
+requiring integrity verification hash the payload as they consume it.
+
+### 6.3 Payload Offset Discovery
+
+For random-access sources, the payload region can be located without reading
+it at all:
+
+```
+function ReadHeaderInfo(reader: ReaderAt, expected_magic: string) -> (header: object, payload_offset: int, payload_bytes: int):
+    prefix = reader.read_at(9, offset=0)
+    validate magic, version
+    header_length = BigEndian32(prefix[5:9])
+    header = JSON.parse(reader.read_at(header_length, offset=9))
+
+    payload_offset = 9 + header_length
+    payload_bytes  = source_size - payload_offset   // when the size is known
+
+    return (header, payload_offset, payload_bytes)
+```
+
+`payload_offset` is the value an `mmap`/`pread` of the binary tail starts
+from, which makes a zero-copy view of the payload possible.
 
 ## 7. Checksum Verification
 
@@ -396,7 +450,7 @@ Future versions may define:
 
 - [ ] Media type registration (`application/x-trix`, `application/x-smsg`, etc.)
 - [ ] Formal magic number registry with registration process
-- [ ] Streaming encoding/decoding for large payloads
+- [x] Streaming encoding/decoding for large payloads (§5.3, §6.2, §6.3)
 - [ ] Header compression for bandwidth-constrained environments
 - [ ] Sub-container nesting specification (Trix within Trix)
 

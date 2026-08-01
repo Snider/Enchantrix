@@ -53,6 +53,11 @@ Enchantrix is an encryption library with a custom `.trix` file format and CLI to
 - `Decode()`: deserializes binary to Trix struct
 - `Pack()`/`Unpack()`: apply/reverse sigils on payload
 - Supports optional checksums via `ChecksumAlgo` field
+- Streaming (`stream.go`): `EncodeStream()`/`DecodeHeader()`/`DecodeStream()` move the
+  payload with `io.Copy` instead of holding it, for payloads too large for a `[]byte`.
+  Byte-identical output to `Encode()`; applies no transform the caller did not ask for.
+- `ReadHeaderInfo()`: returns the payload's byte offset without reading it — the hook
+  for a zero-copy mmap of the binary tail
 
 **pkg/crypt** - Cryptographic services facade
 - `Service`: aggregates hashing, checksums, RSA, and PGP operations
