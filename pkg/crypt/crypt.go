@@ -3,13 +3,14 @@ package crypt
 import (
 	"crypto/md5"
 	"crypto/sha1"
-	"errors"
 	"crypto/sha256"
 	"crypto/sha512"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/Snider/Enchantrix/pkg/crypt/std/lthn"
 	"github.com/Snider/Enchantrix/pkg/crypt/std/pgp"
@@ -21,6 +22,9 @@ import (
 type Service struct {
 	rsa *rsa.Service
 	pgp *pgp.Service
+
+	rsaOnce sync.Once
+	pgpOnce sync.Once
 }
 
 // NewService creates a new crypt Service and initialises its embedded services.
@@ -165,9 +169,9 @@ func (s *Service) Fletcher64(payload string) uint64 {
 
 // ensureRSA initializes the RSA service if it is not already.
 func (s *Service) ensureRSA() {
-	if s.rsa == nil {
+	s.rsaOnce.Do(func() {
 		s.rsa = rsa.NewService()
-	}
+	})
 }
 
 // GenerateRSAKeyPair creates a new RSA key pair.
@@ -192,9 +196,9 @@ func (s *Service) DecryptRSA(privateKey, ciphertext, label []byte) ([]byte, erro
 
 // ensurePGP initializes the PGP service if it is not already.
 func (s *Service) ensurePGP() {
-	if s.pgp == nil {
+	s.pgpOnce.Do(func() {
 		s.pgp = pgp.NewService()
-	}
+	})
 }
 
 // GeneratePGPKeyPair creates a new PGP key pair.
