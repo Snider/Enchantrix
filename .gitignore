@@ -12,3 +12,5 @@ test.*
 /site/
 # macOS
 .DS_Store
+*.test
+*.prof
